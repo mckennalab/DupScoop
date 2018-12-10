@@ -1,0 +1,40 @@
+
+#[derive(Debug)]
+pub struct Fastq {
+    read_name: Vec<u8>,
+    bases: Vec<u8>,
+    quals: Vec<u8>,
+};
+
+impl Fastq {
+    pub fn group_to_fastq(lines: &Chunks<String>) -> Fastq {
+        
+    };
+    
+    
+};
+
+pub fn file_input(path: String) {
+    let input = File::open(path)?;
+    let buffered = BufReader::new(input);
+    
+    for lines in buffered.lines().Group(4) {
+        group_to_fastq(lines);
+        // let hello_as_bytes: &[u8] = "hello!".as_bytes()
+        // println!("{}", line?);
+    }
+};
+
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_basic_alignment() {
+        let filepath = "/Users/aaronmck/Desktop/code/SCIMaul/data/cells/cell.index1.fq";
+        file_input(&filepath);
+        //assert_eq!(alignment.score, 3.0 * scores.match_score);
+    }
+}

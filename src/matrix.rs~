@@ -1,0 +1,45 @@
+use std::fmt::{Display, Formatter, Error};
+
+pub struct Matrix<T: Clone> {
+    values: Vec<T>,
+    row_length: usize,
+}
+
+impl<T> Matrix<T> where T: Clone {
+    #[inline]
+    pub fn cols(&self) -> usize {
+        self.row_length
+    }
+
+    pub fn rows(&self) -> usize {
+        self.values.len() / self.row_length
+    }
+    
+    #[inline]
+    pub fn get(&self, row: usize, col: usize) -> &T {
+        &self.values[(col * self.row_length) + row]
+    }
+    
+    #[inline]
+    pub fn set(&mut self, row: usize, col: usize, value: T) {
+        self.values[(col * self.row_length) + row] = value
+    }
+
+    pub fn new(row: usize, col: usize, initialize: T) -> Matrix<T> {
+        let mat = Matrix::<T>{
+            values: vec![initialize; row * col],
+            row_length: row,
+        };
+        mat
+    }
+
+    pub fn print_matrix(&self) {
+        for ix in 0..self.rows() {
+            for iy in 0..self.cols() {
+                print!("{:?}",self.get(ix,iy));
+                print!("{}",",");
+            }
+            print!("{}","\n");
+        }
+    }
+}

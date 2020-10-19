@@ -1,0 +1,12 @@
+[package]
+name = "rust_aligner"
+version = "0.1.0"
+authors = ["aaronmck <aaronatwpi@gmail.com>"]
+
+[dependencies]
+bio = "*"
+clap = "~2.32"
+csv = "1"
+
+[profile.release]
+debug = true

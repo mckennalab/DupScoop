@@ -8,10 +8,8 @@ pub fn convex_alignment(seq1: &Vec<char>,
                         mtx: &mut mymatrix::MyMatrix<f64>,
                         trc: &mut mymatrix::MyMatrix<i32>,
                         scores: &Scores) -> Alignment {
-
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
-
 
     // Negative traceback values mean to the left; positive traceback means up,
     // and zero means diagonal (one base)
@@ -19,7 +17,7 @@ pub fn convex_alignment(seq1: &Vec<char>,
     // first square
     mtx.set(0, 0, 0.0);
 
-    let scoring_function = |i: usize| -> f64 {-10.0 + (-1.0 * ((i + 1) as f64).log2())};
+    let scoring_function = |i: usize| -> f64 { -10.0 + (-1.0 * ((i + 1) as f64).log2()) };
 
     // initialize the first column and top row
     for n in 1..seq1_limit {
@@ -35,8 +33,8 @@ pub fn convex_alignment(seq1: &Vec<char>,
     for ix in 1..seq1_limit {
         for iy in 1..seq2_limit {
             let score = Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores);
-            let up = mymatrix::maximize_over_column(&mtx,ix, iy,&scoring_function);
-            let left = mymatrix::maximize_over_row(&mtx,ix, iy,&scoring_function);
+            let up = mymatrix::maximize_over_column(&mtx, ix, iy, &scoring_function);
+            let left = mymatrix::maximize_over_row(&mtx, ix, iy, &scoring_function);
             let diag = mtx.get(ix - 1, iy - 1) + score;
 
             if up.1 > left.1 {
@@ -83,11 +81,10 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<i3
         match current_pointer {
             0 => {
                 alignment1.push(seq1[row_index as usize - 1]);
-                alignment2.push(seq2[column_index  as usize - 1]);
+                alignment2.push(seq2[column_index as usize - 1]);
                 // println!("DIAG: Moving from {},{} to {},{}", row_index, column_index, row_index - 1, column_index - 1);
                 row_index -= 1;
                 column_index -= 1;
-
             }
             _x if _x < 0 => {
                 alignment1.append(&mut gap_of_length((row_index - (-1 * _x)) as usize));
@@ -120,4 +117,33 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<i3
 
 fn gap_of_length(x: usize) -> Vec<char> {
     (0..10).map(|_| '-').collect::<Vec<char>>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_alignment() {
+        let scores = Scores::default_scores();
+        let mut mtx = mymatrix::MyMatrix::new(3, 3, 0.0);
+        let mut trc: mymatrix::MyMatrix<i32> = mymatrix::MyMatrix::new(3, 3, 0);
+
+        let alignment = convex_alignment(&vec!['A', 'A', 'A'],
+                                         &vec!['A', 'A', 'A'],
+                                         &mut mtx,
+                                         &mut trc,
+                                         &scores);
+
+        let str1: String = alignment.seq_one.into_iter().collect();
+        let str2: String = alignment.seq_two.into_iter().collect();
+        let str1align: String = alignment.seq_one_aligned.into_iter().collect();
+        let str2align: String = alignment.seq_two_aligned.into_iter().collect();
+
+        assert_eq!(str1, "AAA");
+        assert_eq!(str2, "AAA");
+        assert_eq!(str1align, "AAA");
+        assert_eq!(str2align, "AAA");
+        assert_eq!(alignment.score, 3.0 * scores.match_score);
+    }
 }

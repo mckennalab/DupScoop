@@ -4,12 +4,12 @@ use std::f64;
 
 #[allow(dead_code)]
 pub struct Scores {
-    match_score: f64,
-    mismatch_score: f64,
-    gap_open: f64,
-    gap_ext: f64,
-    gap_start: f64,
-    gap_end: f64,
+    pub match_score: f64,
+    pub mismatch_score: f64,
+    pub gap_open: f64,
+    pub gap_ext: f64,
+    pub gap_start: f64,
+    pub gap_end: f64,
 }
 
 impl Scores {

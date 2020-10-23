@@ -2,29 +2,34 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
+#[allow(dead_code)]
 pub struct ReferenceKmers {
     kmers_forward: HashSet<String>,
     kmers_reverse: HashSet<String>,
     kmer_size: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-enum ReadOrientation {
+pub enum ReadOrientation {
     FWD,
     REV,
-    UNKNOWN
+    UNKNOWN,
 }
+
 impl fmt::Display for ReadOrientation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
+
+#[allow(dead_code)]
 impl ReferenceKmers {
     /// generate a set of unique forward and reverse kmers for a given reference
     pub fn generate_kmers(sequence: &str, kmer_size: &usize) -> ReferenceKmers {
-        let forward_kmers = ReferenceKmers::sequence_to_kmers(sequence,kmer_size);
-        let reverse_kmers = ReferenceKmers::sequence_to_kmers(&ReferenceKmers::reverse_complement_sequence(sequence),kmer_size);
-        ReferenceKmers{kmers_forward: forward_kmers, kmers_reverse: reverse_kmers, kmer_size: *kmer_size}
+        let forward_kmers = ReferenceKmers::sequence_to_kmers(sequence, kmer_size);
+        let reverse_kmers = ReferenceKmers::sequence_to_kmers(&ReferenceKmers::reverse_complement_sequence(sequence), kmer_size);
+        ReferenceKmers { kmers_forward: forward_kmers, kmers_reverse: reverse_kmers, kmer_size: *kmer_size }
     }
 
     pub fn sequence_to_kmers(sequence: &str, kmer_size: &usize) -> HashSet<String> {
@@ -45,29 +50,37 @@ impl ReferenceKmers {
             'C' | 'c' => 'G',
             'G' | 'g' => 'C',
             'T' | 't' => 'A',
-            _ => 'N',
+            _x => *_x,
         }
     }
 
-    pub fn vote_orientation(&self, sequence: &str, minRatio: &f32, min_count: &usize, kmer_size: &usize) -> ReadOrientation {
-        let mut counts : HashMap<ReadOrientation, usize> = HashMap::new();
-        let test_kmers = ReferenceKmers::sequence_to_kmers(sequence, kmer_size);
-
-        counts.insert(ReadOrientation::FWD,self.kmers_forward.intersection(&test_kmers).collect::<Vec<&String>>().len());
-        counts.insert(ReadOrientation::REV,self.kmers_reverse.intersection(&test_kmers).collect::<Vec<&String>>().len());
+    pub fn vote_orientation(&self, sequence: &str, min_ratio: &f32, min_count: &usize) -> ReadOrientation {
+        let mut counts: HashMap<ReadOrientation, usize> = HashMap::new();
+        let test_kmers = ReferenceKmers::sequence_to_kmers(sequence, &self.kmer_size);
+        //println!("fwd {}",self.kmers_forward.intersection(&test_kmers).collect::<Vec<&String>>().len());
+        //println!("rev {}",self.kmers_reverse.intersection(&test_kmers).collect::<Vec<&String>>().len());
+        counts.insert(ReadOrientation::FWD, self.kmers_forward.intersection(&test_kmers).collect::<Vec<&String>>().len());
+        counts.insert(ReadOrientation::REV, self.kmers_reverse.intersection(&test_kmers).collect::<Vec<&String>>().len());
         match ReferenceKmers::max_key_by_value(&counts).cloned() {
             Some(p) => {
                 let max_key_count = counts[&p];
-                let total: usize = counts.iter().map(|(k, v)| v).sum();
-                if max_key_count >= *min_count && (max_key_count as f32)/(total  as f32) >= *minRatio {
+                //println!("max {}",max_key_count);
+                let total: usize = counts.iter().map(|(_k, v)| v).sum();
+                //println!("total {}",total);
+                //println!("ratio {}", (max_key_count as f32) / (total as f32));
+                if max_key_count >= *min_count && (max_key_count as f32) / (total as f32) >= *min_ratio {
+                    //println!("decide {}", p);
                     p
                 } else {
+                    //println!("decide {}", ReadOrientation::UNKNOWN);
                     ReadOrientation::UNKNOWN
                 }
             }
-            None => ReadOrientation::UNKNOWN
+            None => {
+                //println!("decide2 {}", ReadOrientation::UNKNOWN);
+                ReadOrientation::UNKNOWN
+            }
         }
-
     }
 
     // https://stackoverflow.com/questions/62525693/how-do-i-get-the-key-associated-with-the-maximum-value-of-a-rust-hashmap
@@ -80,7 +93,6 @@ impl ReferenceKmers {
             .max_by(|a, b| a.1.cmp(&b.1))
             .map(|(k, _v)| k)
     }
-
 }
 
 
@@ -114,21 +126,30 @@ mod tests {
     #[test]
     fn test_kmer_orientation_basic() {
         let kmers = ReferenceKmers::generate_kmers(&"ACGGTAATTGGCC", &5);
-        let orientation = kmers.vote_orientation("ACGGT", &0.5, &1,&5);
-        assert_eq!(orientation,ReadOrientation::FWD)
+        let orientation = kmers.vote_orientation("ACGGT", &0.5, &1);
+        assert_eq!(orientation, ReadOrientation::FWD)
     }
 
     #[test]
     fn test_kmer_orientation_multi() {
         let kmers = ReferenceKmers::generate_kmers(&"ACGGTCCGGTTTAATTAGAGATTTTT", &5);
-        let orientation = kmers.vote_orientation("ACGGTCCGGTTTAATTAGAGATTTTT", &0.5, &20,&5);
-        assert_eq!(orientation,ReadOrientation::FWD)
+        let orientation = kmers.vote_orientation("ACGGTCCGGTTTAATTAGAGATTTTT", &0.5, &20);
+        assert_eq!(orientation, ReadOrientation::FWD)
     }
 
     #[test]
     fn test_kmer_orientation_below_threshold() {
         let kmers = ReferenceKmers::generate_kmers(&"ACGGTCCGGTTTAATTAGAGATTTTT", &5);
-        let orientation = kmers.vote_orientation("ACGGTCCGGTTTAATTAGAGATTTTT", &0.5, &23,&5);
-        assert_eq!(orientation,ReadOrientation::UNKNOWN)
+        let orientation = kmers.vote_orientation("ACGGTCCGGTTTAATTAGAGATTTTT", &0.5, &23);
+        assert_eq!(orientation, ReadOrientation::UNKNOWN)
+    }
+
+    #[test]
+    fn test_kmer_orientation_real_world() {
+        let kmers = ReferenceKmers::generate_kmers(&"GGCGTCTGCTTGGGTGTTTAACCTTTTTTTTTTAATGTACTTCGTTCAGTTACGTATTGCTGTAGCGACCTATGCTATCTGCGTGACTCCAAGATNNNYRNNNYRNNNYRNNNACTCCAAGATCTACACGACGCTCTTCCGATCTNNNNNNNNNNNNNNNNCAGACATGATAAGATACATTGATGAGTTTGGACAAACCACAACTAGAATGCAGTGAAAAAAATGCTTTATTTGTGAAATTTGTGATGCTATTGCTTTATTTGTAACCATTATAAGCTGCAATAAACAAGTTTAGTTAACGCTCACCTATTAGCGGCTAAGGCTTAAGTACAGTTGATCAGAGTCGCGTAGAGTACAGTGCAAGCCTAGGGTCAGTACCGGTGCTGAGTTCGTTGACGGCAACTTGGACGCCTAAATCCTGTATACTCGCTTACGGCGGTCCGAAAGTCGTAGTGGTCCCGATCGCGTGTCTTAAATTCTGCAAGTTGGGCTGTGGCGCTCGTAAATGAGTCTCCCGGTTATCGAGTGCGTCCAAATGATGAGTTACCAAGCGGATTTCGATGAAATCTCGTAACGGTTGGAGAGTACCGGCTAAACGTCTGGTAGTCCTTACGGTGATCTGCTAGGATCTGAGTCCGGATCAGAAGAACTCGTCAAGAAGGCGATAGAAGGCGATGCGCTGCGAATCGGGAGCGGCGATACCGTAAAGCACGAGGAAGCGGTCAGCCCATTCGCCGCCAAGCTCTTCAGCAATATCACGGGTAGCCAACGCTATGTCCTGATAGCGGTCCGCCACACCCAGCCGGCCACAGTCGATGAATCCAGAAAAGCGGCCATTTTCCACCATGATATTCGGCAAGCAGGCATCGCCATGGGTCACGACGAGATCCTCGCCGTCGGGCATGCGCGCCTTGAGCCTGGCGAACAGTTCGGCTGGCGCGAGCCCCTGATGCTCTTCGTCCAGATCATCCTGATCGACAAGACCGGCTTCCATCCGAGTACGTGCTCGCTCGATGCGATGTTTCGCTTGGTGGTCGAATGGGCAGGTAGCCGGATCAAGCGTATGCAGCCGCCGCATTGCATCAGCCATGATGGATACTTTCTCGGCAGGAGCAAGGTGAGATGACAGGAGATCCTGCCCCGGCACTTCGCCCAATAGCAGCCAGTCCCTTCCCGCTTCAGTGACAACGTCGAGCACAGCTGCGCAAGGAACGCCCGTCGTGGCCAGCCACGATAGCCGCGCTGCCTCGTCCTGCAGTTCATTCAGGGCACCGGACAGGTCGGTCTTGACAAAAAGAACCGGGCGCCCCTGCGCTGACAGCCGGAACACGGCGGCATCAGAGCAGCCGATTGTCTGTTGTGCCCAGTCATAGCCGAATAGCCTCTCCACCCAAGCGGCCGGAGAACCTGCGTGCAATCCATCTTGTTCAATCATCGGTCCAGGATTCTCTTCGACATCTCCGGCTTGTTTCAGCAGAGAGAAGTTTGTTGCCTTGTACAGCTCGTCCATGCCGCCGGTGGAGTGGCGGCCCTCGGCGCGTTCGTACTGTTCCACGATGGTGTAGTCCTCGTTGTGGGAGGTGATGTCCAACTTGATGTTGACGTTGTAGGCGCCGGGCAGCTGCACGGGCTTCTTGGCCTTGTAGGTGGTCTTGACCTCAGCGTCGTAGTGGCCGCCGTCCTTCAGCTTCAGCCTCTGCTTGATCTCGCCCTTCAGGGCGCCGTCCTCGGGGTACATCCGCTCGGAGGAGGCCTCCCAGCCCATGGTTTTCTTCTGCATTACGGGGCCGTCGGAGGGGAAGTTGGTGCCGCGCAGCTTCACCTTGTAGATGAACTCGCCGTCCTGCAGGGAGGAGTCCTGGGTCACGGTCACCACGCCGCCGTCCTCGAAGTTCATCACGCGCTCCCACTTGAAGCCCTCGGGGAAGGACAGCTTCAAGTAGTCGGGGATGTCGGCGGGGTGCTTCACGTAGGCCTTGGAGCCGTACATGAACTGAGGGGACAGGATGTCCCAGGCGAAGGGCAGGGGGCCACCCTTGGTCACCTTCAGCTTGGCGGTCTGGGTGCCCTCGTAGGGGCGGCCCTCGCCCTCGCCCTCGATCTCGAACTCGTGGCCGTTCACGGAGCCCTCCATGTGCACCTTGAAGCGCATGAACTCCTTGATGATGGCCATGTTATCCTCCGGACCACACTNNNYRNNNYRNNNYRNNNGGACCACACTCTAGAGCGTATGTTACCGAGCCTGAGCAATACGTAACTGAACGAAGTACATTAAAAAAAAAAGGTTAAACACCCAAGCAGACGCC",
+                                                   &5);
+        let orientation = kmers.vote_orientation("CATTGTACTTCGTTCCAGTTACGTATTGCTGTAGCGACCTATGCTATCTACGTGACTCCAAGATTTGTGTATCATGGCACAAACTCCAAGATCTACGACGCTCGCTACGATCTCACTTGGAAGTCGTCTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTGGAGTGAAAAAATGCTTTATTTGTGAAATTTGTGATGCTATTGCTTTATTTGTAACCATTATAAGCGCTGCAATAAACAAGTTTAGTTAACGCTCACCTATTAGCGGCTAAGGCTTAAGTACAGTTGATCAGAGTCGCGTAGAGTACAGTGCAAGCCTAGGCGCAATACGAAAAAACCGGTGCTGAGTTCGTTGACGGCAACGGACGCCTAAATCCTGTATACTCGCTTACGGCGGTCCGAAAGTCGTAGTGGTCCCGATCGCGTGTCTTAAATTCTGCAAGTTGGGCTGTGGCGCTCGTAAATGGAGTCTCCCGGTTATCGAGTGCGTCCAAATGATGAGTTACCAAGCGGATTTCGATGAAATCTCGCTTAGCAGTTGAAGTACCGGCTAAACGTCTGGTAGATCCTTACGGTGATGCTGAGGATCTGAGTCCGGATCAAGAACTCGTCAAGAAGGCGATAGAAGGCGATGCGCTGCGAATCGGGAGCGGCAGTACCGTAAAGCACGAGGAAGCGGTCAGCCCATTCGCCGCCAAGCTCTTCAGCAATATCACGGGTAGCCAACGCTATGTCCTGATAGCGGTCCGCCACACCCAGCCGGCCACAGTCGATGAATCCAGAAAAGCGGCCATTTTCCACCATGATATTCGGCAAGCAGGCATCGCCATGGGTCACGACGAGATCCTCGCCGTCGGGCATGCGCGCCTTGAGCCTGGCGAACAGTTCGGCTGGCACGAGCCTGATGCTCTTCGTCAGATCATCTGATCGACAAGACCGGCTTCCATCCGAGTACGTGCTCGCTCGATGCGATGTTTCGCTTGGTGGTCGAATGGGCAGGTAGCCGGATCAAGCGTATGCAGCCGCCGCATTGCATCAGCCATGATGGATACTTTCTCGGCAGGAGCAAGGTGAGATGACAGGAGATCCTGCCCCGGCACTTCGCCCAATAGCCAGTCCTTCGCTTCAGTGACAACGTCGAGCACAGCTGCGCAAGGAGCACTTCCCGTCGTGGCCAGCCACGATAGCATTCGCGCTGCCTCGTCCTGCACCAGTTCATTCAGGGCACCGGACAGGTCGGTCTTGACAAAAGAACCAGGCGCCCCTGCGCTGACAGCCGGAACACGGCAGCATCAGAGCAGCCGATTGTCTGTTGTGCTAGTCATAGCCGAATAGCCTCTCCACCCAAGCGGCCGGAGAACCTGCGTGCCAATCCATCTTGTTCAATCATCGGTCAGGATTCTCTTCGACATCTCCGGCTTGTTTCAGCAGAGAGAAGTTTGTTGCCTTGTACAGCTCGTCATGCCGCCGGTGGAGTGGCGGCCCTCGGCGCGTTCGTACCTGTTCCACGATGGTGTAGTCCTCGTTGTGGGGTGATGTCCAACTTGATGTTGACGTTGTAGGCGCCGGGCAGCTGCACGGGGCTTCTTGGCCTTGTAGGTGGTCTTGACCTCAGCGTCGTAGTGGCCGCCGTCCTTCAGCTTCAGCCTCTGCTTGATCTCGCCCTTCAGGGCGCCGTCCTCGGGGTACATCCGCTCAGAGGAGGCCTCCCAGCCATGGTTTTCTTCTGCATTACGGGGCCGTCGGAGGAAGTTGGTGCCGCGCAGCTTCACCTTGTAGATGGCGCTCGCCGTCCTGCGGGAGGAGTCCTGGGTCACGGTCCCTCACGCCGCCGTCCTCGAAGTTCATCACGCGCTCCCACTTGAAGCCCTCGGGGAAGGACGGCTTCAAGTAGTCCAGGGGATGTCGGCGGGGTGCTTCACGTAGGCCTTGGAGCCGTACATGAACTGAGGGACAGGATGTCCCAGGCGAAGGCAGGGGGCCCACCCCGCCAGGTGCACCTTCAGCTTGGCGGTCTGGGTGCCCTCGTAGGGGCGGCCCTCGCCCTCGCCCTCGATCTCGAACTCGTGGCCGTTCACGGAGCCTCCATGTGCACCTTGAAGCGCATGAACTCCTTGATGATGGCCATGTTATCCTCGGACCACACTACCTACAGTAGGTCAGGCGGACCACACTCTAGAGCGTATGTTACCGAGCCTGAGCAATACGTAA",
+                                                 &0.5, &23);
+        assert_eq!(orientation, ReadOrientation::REV)
     }
 }

@@ -1,28 +1,24 @@
+mod convex;
 mod kmer_orientation;
 mod score_matrix;
-pub mod matrix;
+pub mod mymatrix;
 pub mod needleman;
 
 extern crate bio;
 extern crate clap;
 extern crate csv;
 
+extern crate matrix;
+
 use std::str;
-use std::error::Error;
-use std::io;
-use std::process;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{Write, BufReader, BufRead};
-use needleman::{Scores, Direction};
-use clap::{Arg, App, SubCommand};
+use std::io::{Write};
+use needleman::{Scores};
+use clap::{Arg, App};
 
-use bio::alphabets;
-use bio::data_structures::suffix_array::suffix_array;
-use bio::data_structures::bwt::{bwt, less, Occ};
-use bio::data_structures::fmindex::{FMIndex, FMIndexable};
 use bio::io::fastq;
-use needleman::Direction::Done;
+use kmer_orientation::{ReferenceKmers, ReadOrientation};
 
 fn main() -> std::io::Result<()> {
     let matches = App::new("RustyShovel")
@@ -69,10 +65,6 @@ fn main() -> std::io::Result<()> {
     let aligner = matches.value_of("aligner").unwrap_or("swa");
     println!("input : {}, output : {} aligner : {}",input_file, output_file, aligner);
 
-    // setup the output fasta file
-    let output = File::create(output_file)?;
-    //write!(output, "Rust\n\nFun")?;
-
     // read in the reference, and covert to a string
     // ----------------------------------------------------------------
     let mut file = File::open(reference_file)?;
@@ -94,14 +86,13 @@ fn main() -> std::io::Result<()> {
 
     let reference_as_chars: Vec<char> = reference.to_string().chars().collect();
 
+    let kmer_orientation = ReferenceKmers::generate_kmers(&reference,&20);
+
+
     // read in sequences and align them
     // ----------------------------------------------------------------
     let scores = Scores::default_scores();
-    
     let reader = fastq::Reader::from_file(input_file).unwrap();
-
-    let seq1_limit = reference_as_chars.len() + 1;
-
     let mut output = File::create(output_file).unwrap();
 
     let mut count = 0;
@@ -109,28 +100,37 @@ fn main() -> std::io::Result<()> {
         // obtain record or fail with error
         let record = result.unwrap();
 
-        let read_as_chars: Vec<char> = str::from_utf8(record.seq()).unwrap().to_string().chars().collect();
-        let seq2_limit = read_as_chars.len() + 1;
+        str::from_utf8(record.seq()).unwrap().to_string();
+        let orientation = kmer_orientation.vote_orientation(&str::from_utf8(record.seq()).unwrap(), &0.8, &50);
 
-        //let mut mtx = matrix::Matrix::new(seq1_limit, seq2_limit, 0.0);
-        //let mut trc: matrix::Matrix<Direction> = matrix::Matrix::new(seq1_limit, seq2_limit, Done);
+        let read_as_chars = match orientation {
+            ReadOrientation::REV => {Some(ReferenceKmers::reverse_complement_sequence(str::from_utf8(record.seq()).unwrap()))}
+            ReadOrientation::FWD => {Some(str::from_utf8(record.seq()).unwrap().to_string())}
+            ReadOrientation::UNKNOWN => {None}
+        };
 
-        //let alignment = needleman::needleman_wunsch_borrow(&reference_as_chars, &read_as_chars,&mut mtx, &mut trc, &scores);
-        let alignment = needleman::needleman_wunsch(&reference_as_chars, &read_as_chars, &scores);
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
-        let str1align: String = alignment.seq_one_aligned.into_iter().collect();
-        let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 
-        writeln!(output, ">{}", "ref")?;
-        writeln!(output, "{}", str1align)?;
-        writeln!(output, ">{}", record.id())?;
-        writeln!(output, "{}", str2align)?;
+        match read_as_chars {
+            Some(p) => {
+                let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
+                let str1align: String = alignment.seq_one_aligned.into_iter().collect();
+                let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 
-        count += 1;
-        if count % 50 == 0 {
-            println!("Processed {} reads", count);
+                writeln!(output, ">{}", "ref")?;
+                writeln!(output, "{}", str1align)?;
+                writeln!(output, ">{}", record.id())?;
+                writeln!(output, "{}", str2align)?;
+
+                count += 1;
+                if count % 50 == 0 {
+                    println!("Processed {} reads", count);
+                }
+            }
+            None => {
+
+            }
         }
+
     }
     //output.close();
 

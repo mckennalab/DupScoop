@@ -1,7 +1,8 @@
-use matrix;
+use mymatrix;
 use needleman::Direction::{Left, Up, Diag, Done};
 use std::f64;
 
+#[allow(dead_code)]
 pub struct Scores {
     match_score: f64,
     mismatch_score: f64,
@@ -37,7 +38,7 @@ impl Scores {
 
 
 
-
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug)]
 pub enum Direction {
     Up,
@@ -46,6 +47,7 @@ pub enum Direction {
     Done,
 }
 
+#[allow(dead_code)]
 pub struct Alignment {
     pub seq_one: Vec<char>,
     pub seq_two: Vec<char>,
@@ -59,34 +61,16 @@ pub fn needleman_wunsch(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores) -> 
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
 
-    let mut mtx = matrix::Matrix::new(seq1_limit, seq2_limit, 0.0);
+    let mut mtx = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, 0.0);
     //println!("made matrix of {} {}", mtx.rows(), mtx.cols());
-    let mut trc: matrix::Matrix<Direction> = matrix::Matrix::new(seq1_limit, seq2_limit, Done);
+    let mut trc: mymatrix::MyMatrix<Direction> = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, Done);
     needleman_wunsch_borrow(seq1, seq2, &mut mtx, &mut trc, scores)
 }
 
-
-pub fn convex(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores, scoring_function: &Fn(usize, f64) -> f64) -> Alignment {
-    let seq1_limit = seq1.len() + 1;
-    let seq2_limit = seq2.len() + 1;
-
-    let mut mtx = matrix::Matrix::new(seq1_limit, seq2_limit, 0.0);
-
-    println!("made matrix of {} {}", mtx.rows(), mtx.cols());
-    let mut trc: matrix::Matrix<Direction> = matrix::Matrix::new(seq1_limit, seq2_limit, Done);
-    convex_alignment_borrow(seq1, seq2, &mut mtx, &mut trc, scores, scoring_function)
-}
-
-
-fn min2(x: f64, y: f64) -> f64 {
-    if x < y { x } else { y }
-}
-
-
 pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
                                seq2: &Vec<char>,
-                               mtx: &mut matrix::Matrix<f64>,
-                               trc: &mut matrix::Matrix<Direction>,
+                               mtx: &mut mymatrix::MyMatrix<f64>,
+                               trc: &mut mymatrix::MyMatrix<Direction>,
                                scores: &Scores) -> Alignment {
 
     let seq1_limit = seq1.len() + 1;
@@ -96,11 +80,11 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
 
     // initialize the top row and first column
     for n in 1..seq1_limit {
-        mtx.set(n, 0, (scores.gap_ext * (n as f64)));
+        mtx.set(n, 0, scores.gap_ext * (n as f64));
         trc.set(n, 0, Up);
     }
     for n in 1..seq2_limit {
-        mtx.set(0, n, (scores.gap_ext * (n as f64)));
+        mtx.set(0, n, scores.gap_ext * (n as f64));
         trc.set(0, n, Left);
     }
 
@@ -134,121 +118,8 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
     traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1))
 }
 
-
-/**mtxM: &mut matrix::Matrix<f64>,
-mtxU: &mut matrix::Matrix<f64>,
-mtxL: &mut matrix::Matrix<f64>,**/
-pub fn needleman_affine_borrow(seq1: &Vec<char>,
-                               seq2: &Vec<char>,
-                               mtx: &mut matrix::Matrix<f64>,
-                               trc: &mut matrix::Matrix<Direction>,
-                               scores: &Scores) -> Alignment {
-    let seq1_limit = seq1.len();
-    let seq2_limit = seq2.len();
-
-    // first square
-    mtx.set(0, 0, 0.0);
-
-    // initialize the top row and first column
-    for n in 1..seq1_limit {
-        mtx.set(n, 0, (scores.gap_ext * (n as f64)));
-        trc.set(n, 0, Up);
-    }
-    for n in 1..seq2_limit {
-        mtx.set(0, n, (scores.gap_ext * (n as f64)));
-        trc.set(0, n, Left);
-    }
-
-    // fill in the matrix
-    for ix in 1..seq1_limit {
-        for iy in 1..seq2_limit {
-            let score = if seq1[ix - 1] == seq2[iy - 1] { scores.match_score } else { scores.mismatch_score };
-            let up = mtx.get(ix - 1, iy) + scores.gap_ext;
-            let left = mtx.get(ix, iy - 1) + scores.gap_ext;
-            let diag = mtx.get(ix - 1, iy - 1) + score;
-
-            if up > left {
-                if diag < up {
-                    mtx.set(ix, iy, up);
-                    trc.set(ix, iy, Up);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            } else {
-                if diag < left {
-                    mtx.set(ix, iy, left);
-                    trc.set(ix, iy, Left);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            };
-        }
-    }
-    traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1))
-    //}
-}
-
-/// Aligns two sequences using the Convex alignment with an arbitrary scoring function (that should be convex of distance)
-pub fn convex_alignment_borrow(seq1: &Vec<char>,
-                               seq2: &Vec<char>,
-                               mtx: &mut matrix::Matrix<f64>,
-                               trc: &mut matrix::Matrix<Direction>,
-                               scores: &Scores,
-                               scoring_function: &Fn(usize, f64) -> f64) -> Alignment {
-
-    let seq1_limit = seq1.len() + 1;
-    let seq2_limit = seq2.len() + 1;
-
-    // first square
-    mtx.set(0, 0, 0.0);
-
-    // initialize the top and first column
-    for n in 1..seq1_limit {
-        mtx.set(n, 0, scoring_function(n, 0.0));
-        trc.set(n, 0, Up);
-    }
-    for n in 1..seq2_limit {
-        mtx.set(0, n, scoring_function(n, 0.0));
-        trc.set(0, n, Left);
-    }
-
-    // fill in the matrix
-    for ix in 1..seq1_limit {
-        for iy in 1..seq2_limit {
-            let score = if seq1[ix - 1] == seq2[iy - 1] { scores.match_score } else { scores.mismatch_score };
-
-            let up = matrix::maximize_over_column(&mtx, iy, ix, scoring_function);
-            let left = matrix::maximize_over_row(&mtx, ix, iy, scoring_function);
-            let diag = mtx.get(ix - 1, iy - 1) + score;
-
-            // Find the minimum of d11, d01, d10
-            // by enumerating all the cases (for speed)
-
-            if up.1 < left.1 {
-                if diag < left.1 {
-                    mtx.set(ix, iy, left.1);
-                    trc.set_row_range(ix, iy - left.0, iy, Left);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            } else {
-                if diag < up.1 {
-                    mtx.set(ix, iy, up.1);
-                    trc.set_column_range(ix - up.0, ix, iy, Up);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            };
-        }
-    }
-    traceback(seq1, seq2, &trc, mtx.get(seq1_limit - 1, seq2_limit - 1))
-}
-
 // a convenience struct for matching movement tuples
+#[allow(dead_code)]
 struct TruthSet {
     same_row: bool,
     same_col: bool,
@@ -256,7 +127,7 @@ struct TruthSet {
 }
 
 /// traceback a matrix into an alignment struct
-pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &matrix::Matrix<Direction>, score: f64) -> Alignment {
+pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Direction>, score: f64) -> Alignment {
     assert_eq!(seq1.len(), trc.rows() - 1, "The matrix doesn't have the right number of rows; rows: {}, expected: {}", seq1.len(), trc.rows() - 1);
     assert_eq!(seq2.len(), trc.cols() - 1, "The matrix doesn't have the right number of columns; columns: {}, expected: {}", seq2.len(), trc.cols() - 1);
 
@@ -295,9 +166,6 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &matrix::Matrix<Direct
             Done => {
                 //println!("{},{}",row_index,column_index);
                 break;
-            }
-            _ => {
-                // println!("{}","POOP");
             }
         }
         current_pointer = trc.get(row_index, column_index);
@@ -403,28 +271,6 @@ mod tests {
         assert_eq!(str2align, "AAA");
         assert_eq!(alignment.score, 2.0 * scores.match_score + scores.mismatch_score);
     }
-
-    /*
-    #[test]
-    fn test_mismatch_length_convex() {
-        let scores = Scores::default_scores();
-        // convex(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores, scoring_function: &Fn(usize, f64) -> f64)
-        fn  scoring_function(sz: usize, current_val: f64) -> f64 { current_val - 10.0 - (sz as f64).log(10.0)}
-        let alignment = convex(&vec!['A', 'T', 'T', 'A', 'A'], &vec!['T', 'A', 'A'], &scores, &scoring_function);
-
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
-        let str1align: String = alignment.seq_one_aligned.into_iter().collect();
-        let str2align: String = alignment.seq_two_aligned.into_iter().collect();
-
-        assert_eq!(str1, "ATTAA");
-        assert_eq!(str2, "TAA");
-        println!("Alignment 1: {} alignment 2: {}", str1align, str2align);
-
-        assert_eq!(str1align, "ATTAA");
-        assert_eq!(str2align, "--TAA");
-    }
-*/
 
     #[test]
     fn test_mismatch_length() {

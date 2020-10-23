@@ -1,16 +1,14 @@
-use std::fmt::{Display, Debug};
-use std::borrow::Cow;
-use std::ops;
+use std::fmt::{Debug};
 
 use std::f64;
 
 /// A row-first matrix class
-pub struct Matrix<T: Clone> {
+pub struct MyMatrix<T: Clone> {
     values: Vec<T>,
     row_length: usize,
 }
 
-impl<T> Matrix<T> where T: Clone + Debug + Sized {
+impl<T> MyMatrix<T> where T: Clone + Debug + Sized {
     #[inline]
     pub fn rows(&self) -> usize {
         self.row_length
@@ -44,8 +42,8 @@ impl<T> Matrix<T> where T: Clone + Debug + Sized {
         }
     }
 
-    pub fn new(row: usize, col: usize, initialize: T) -> Matrix<T> {
-        let mat = Matrix::<T>{
+    pub fn new(row: usize, col: usize, initialize: T) -> MyMatrix<T> {
+        let mat = MyMatrix::<T>{
             values: vec![initialize; row * col],
             row_length: row,
         };
@@ -77,12 +75,12 @@ impl<T> Matrix<T> where T: Clone + Debug + Sized {
 }
 
 
-pub fn maximize_over_column(mtx: &Matrix<f64>, col: usize, cur_row: usize, scoring_function: &Fn(usize, f64) -> f64) -> (usize, f64) {
+pub fn maximize_over_column(mtx: &MyMatrix<f64>, col: usize, cur_row: usize, scoring_function: &dyn Fn(usize) -> f64) -> (usize, f64) {
 
     let mut max_index = cur_row;
     let mut max_score = f64::MIN;
     for n in (0..cur_row).rev() {
-        let score = scoring_function(cur_row - n, mtx.get(n,col));
+        let score = scoring_function(cur_row - n) + mtx.get(n,col);
         if score > max_score {
             max_index = n;
             max_score = score;
@@ -92,11 +90,11 @@ pub fn maximize_over_column(mtx: &Matrix<f64>, col: usize, cur_row: usize, scori
     (max_index,max_score)
 }
 
-pub fn maximize_over_row(mtx: &Matrix<f64>, row: usize, cur_column: usize, scoring_function: &Fn(usize, f64) -> f64) -> (usize, f64) {
+pub fn maximize_over_row(mtx: &MyMatrix<f64>, row: usize, cur_column: usize, scoring_function: &dyn Fn(usize) -> f64) -> (usize, f64) {
     let mut max_index = cur_column;
     let mut max_score = f64::MIN;
     for n in (0..cur_column).rev() {
-        let score = scoring_function(cur_column - n, mtx.get(row,n));
+        let score = scoring_function(cur_column - n) + mtx.get(row,n);
         if score > max_score {
             max_index = n;
             max_score = score;
@@ -115,7 +113,7 @@ mod tests {
     #[test]
     fn basic_size_setup() {
 
-        let mut mtx = Matrix::new(10, 5, 0.0);
+        let mut mtx = MyMatrix::new(10, 5, 0.0);
 
         assert_eq!(mtx.rows(), 10);
         assert_eq!(mtx.cols(), 5);
@@ -124,7 +122,7 @@ mod tests {
     #[test]
     fn get_set() {
 
-        let mut mtx = Matrix::new(10, 5, 0.0);
+        let mut mtx = MyMatrix::new(10, 5, 0.0);
 
         mtx.set(1,4, 2.0);
         assert_eq!(mtx.get(1,4),2.0);
@@ -134,8 +132,8 @@ mod tests {
     #[test]
     fn minimize_over_x_test() {
 
-        let mut mtx = Matrix::new(10, 5, 0.0);
-        let convert_function = |distance: usize, score_at_distance: f64| (-10.0 - ((distance as f64) * 0.1)) + score_at_distance;
+        let mut mtx = MyMatrix::new(10, 5, 0.0);
+        let convert_function = |distance: usize| (-10.0 - ((distance as f64) * 0.1));
 
         mtx.set(3,4, 20.0);
         let (index, score) = maximize_over_column(&mtx, 4,4, &convert_function);

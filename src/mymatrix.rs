@@ -1,4 +1,4 @@
-use std::fmt::{Debug};
+use std::fmt::{Debug, Display};
 
 use std::f64;
 
@@ -8,7 +8,7 @@ pub struct MyMatrix<T: Clone> {
     row_length: usize,
 }
 
-impl<T> MyMatrix<T> where T: Clone + Debug + Sized {
+impl<T> MyMatrix<T> where T: Clone + Debug + Sized + Display {
     #[inline]
     pub fn rows(&self) -> usize {
         self.row_length
@@ -63,11 +63,12 @@ impl<T> MyMatrix<T> where T: Clone + Debug + Sized {
     }
 
 
-    pub fn print_matrix(&self) {
+    pub fn print_matrix(&self, width: usize) {
         for ix in 0..self.rows() {
             for iy in 0..self.cols() {
-                print!("{:?}",self.get(ix,iy));
-                print!("{}",",");
+                //print!("{:?}",self.get(ix,iy));
+                print!("{number:>width$}",number=self.get(ix,iy), width = width);
+                print!("{:width$}",",", width = 2);
             }
             print!("{}","\n");
         }
@@ -76,7 +77,6 @@ impl<T> MyMatrix<T> where T: Clone + Debug + Sized {
 
 
 pub fn maximize_over_column(mtx: &MyMatrix<f64>, col: usize, cur_row: usize, scoring_function: &dyn Fn(usize) -> f64) -> (usize, f64) {
-
     let mut max_index = cur_row;
     let mut max_score = f64::MIN;
     for n in (0..cur_row).rev() {

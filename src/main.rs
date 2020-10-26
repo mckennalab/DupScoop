@@ -112,7 +112,7 @@ fn main() -> std::io::Result<()> {
 
         match read_as_chars {
             Some(p) => {
-                let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
+                let alignment = convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
                 let str1align: String = alignment.seq_one_aligned.into_iter().collect();
                 let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 
@@ -122,7 +122,7 @@ fn main() -> std::io::Result<()> {
                 writeln!(output, "{}", str2align)?;
 
                 count += 1;
-                if count % 50 == 0 {
+                if count % 1 == 0 {
                     println!("Processed {} reads", count);
                 }
             }

@@ -1,6 +1,7 @@
 use mymatrix;
 use needleman::Direction::{Left, Up, Diag, Done};
 use std::f64;
+use std::fmt;
 
 #[allow(dead_code)]
 pub struct Scores {
@@ -45,6 +46,11 @@ pub enum Direction {
     Left,
     Diag,
     Done,
+}
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[allow(dead_code)]

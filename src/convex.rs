@@ -47,45 +47,33 @@ pub fn convex_alignment(seq1: &Vec<char>,
 
     // fill in the matrix
     for ix in 1..seq1_limit {
-        if ix % 50 == 0 {
-            //println!("row {}", ix);
-        }
         for iy in 1..seq2_limit {
             let score = Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores);
             let up = mymatrix::maximize_over_column(&mtx, iy, ix, &scoring_function);
             let left = mymatrix::maximize_over_row(&mtx, ix, iy, &scoring_function);
             let diag = mtx.get(ix - 1, iy - 1) + score;
 
-            ////println!("HERE (full): {},{},{},{},{}",score,left.0,left.1,up.0,up.1);
             if up.1 > left.1 {
                 if diag < up.1 {
                     mtx.set(ix, iy, up.1);
                     trc.set(ix, iy, (ix - up.0) as i32);
-                    ////println!("HERE (UP): {},{} -> {}",ix,iy,up.0);
                 } else {
                     mtx.set(ix, iy, diag);
                     trc.set(ix, iy, 0);
-                    ////println!("HERE (diag): {},{} -> {}",ix,iy,0);
                 }
             } else {
                 if diag < left.1 {
                     mtx.set(ix, iy, left.1);
-                    ////println!("left {}",left.0);
-                    assert!(left.0 < iy);
                     trc.set(ix, iy, -1 * (iy as i32 - left.0 as i32));
-                    ////println!("HERE (left): {},{} -> {}",ix,iy,left.0);
                 } else {
                     mtx.set(ix, iy, diag);
                     trc.set(ix, iy, 0);
-                    ////println!("HERE (diag): {},{} -> {}",ix,iy,0);
                 }
             };
         }
     }
-    //mtx.print_matrix(20);
-    trc.print_matrix(5);
 
-    let no_cost = |i: usize| -> f64 {0 as f64};
+    let no_cost = |_i: usize| -> f64 {0 as f64};
     //println!("row_index={},rows={} -- {},{}",mtx.rows(),mtx.cols(),seq1_limit,seq2_limit);
     let start_row = mymatrix::maximize_over_column(&mtx, seq2_limit - 1, seq1_limit - 1, &no_cost);
     let start_column = mymatrix::maximize_over_row(&mtx, seq1_limit - 1, seq2_limit - 1, &no_cost);
@@ -111,27 +99,20 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, start_row: usize, start_col
     assert_eq!(seq1.len(), trc.rows() - 1, "The matrix doesn't have the right number of rows; rows: {}, expected: {}", seq1.len(), trc.rows() - 1);
     assert_eq!(seq2.len(), trc.cols() - 1, "The matrix doesn't have the right number of columns; columns: {}, expected: {}", seq2.len(), trc.cols() - 1);
 
-    let gap = '-';
-
     let mut alignment1 = Vec::new();
     let mut alignment2 = Vec::new();
 
     let mut row_index = start_row as u32;
     let mut column_index = start_column as u32;
 
-    //println!("COLSSSSS = {}, {}",trc.cols(),start_column);
-    //println!("ROWSSSSS = {}, {}",trc.rows(),start_row);
-
     // if we're off the final score
-    if (row_index + 1 < trc.rows() as u32) {
-        //println!("ADDING ROW row_index={},rows={}",row_index,trc.rows());
+    if row_index + 1 < trc.rows() as u32 {
         alignment2.append(&mut gap_of_length((trc.rows() - 1) - row_index as usize));
         let alignment1_reversed = &mut seq1[row_index as usize ..((trc.rows() - 1) as usize)].to_vec();
         alignment1_reversed.reverse();
         alignment1.append(alignment1_reversed);
     }
-    if (column_index + 1 < trc.cols()as u32) {
-        //println!("ADDING COL column_index={},rows={}",column_index,trc.cols());
+    if column_index + 1 < trc.cols() as u32 {
         let alignment2_reversed = &mut seq2[column_index as usize ..((trc.cols() - 1) as usize)].to_vec();
         alignment2_reversed.reverse();
         alignment2.append(alignment2_reversed);
@@ -141,20 +122,15 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, start_row: usize, start_col
     let mut current_pointer = trc.get(row_index as usize, column_index as usize);
 
     loop {
-        ////println!("loop => {},{}",alignment1.iter().collect::<String>(),alignment2.iter().collect::<String>());
-        //println!("asdfasdf_0 => {},{},{}",row_index,column_index,current_pointer);
-        // neg = left, positive = up
         match current_pointer {
             _ if row_index == 0 && column_index == 0 => {
                 break;
             }
             0 => {
-                //println!("____0 => {},{}",row_index,column_index);
                 assert!(row_index > 0);
                 assert!(column_index > 0);
                 alignment1.push(seq1[(row_index - 1) as usize ]);
                 alignment2.push(seq2[(column_index -1) as usize ]);
-                // ////println!("DIAG: Moving from {},{} to {},{}", row_index, column_index, row_index - 1, column_index - 1);
                 row_index -= 1;
                 column_index -= 1;
             }
@@ -162,20 +138,16 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, start_row: usize, start_col
                 let offset = (-1 * _x) as usize;
                 let move_to_column = column_index as usize - offset;
 
-                //println!("____-X => {},{},{} --> {}, move to {}",_x,row_index,column_index, offset, move_to_column);
                 assert!(((-1 * _x) as u32) <= column_index);
                 alignment1.append(&mut gap_of_length(offset));
                 let alignment2_reversed = &mut seq2[move_to_column..(column_index as usize)].to_vec();
                 alignment2_reversed.reverse();
                 alignment2.append(alignment2_reversed);
-                // ////println!("LEFT: Moving from {},{} to {},{}", row_index, column_index, row_index, column_index - 1);
                 column_index = move_to_column as u32;
             }
             _x if _x > 0 => {
                 // _x is the offset, determine the row we're moving to
                 let move_to_row = row_index - (_x as u32);
-                let sliced_str = seq1[(move_to_row as usize)..(row_index as usize)].to_vec();
-                //println!("____X => _x={},row={},col={}, casted {} {},{}, to {} and {}",_x,row_index,column_index,_x,(_x as usize),(row_index as usize - 1),sliced_str.len(), (((row_index )- _x as u32) as usize));
                 assert!((_x as u32) <= row_index);
 
                 let alignment1_reversed = &mut seq1[(move_to_row as usize)..(row_index as usize)].to_vec();
@@ -188,10 +160,9 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, start_row: usize, start_col
         }
         current_pointer = trc.get(row_index as usize, column_index as usize);
     }
-    ////println!("loop => {},{}",alignment1.iter().collect::<String>(),alignment2.iter().collect::<String>());
     alignment1.reverse();
     alignment2.reverse();
-    // ////println!("{},{}",alignment1.len(),alignment2.len());
+
     return Alignment {
         seq_one: seq1.to_vec(),
         seq_two: seq2.to_vec(),

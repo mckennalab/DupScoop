@@ -7,6 +7,10 @@ authors = ["aaronmck <aaronatwpi@gmail.com>"]
 bio = "*"
 clap = "~2.32"
 csv = "1"
+matrix = "*"
 
 [profile.release]
 debug = true
+
+[build]
+rustflags = "-C target-cpu=native"

@@ -60,27 +60,19 @@ impl ReferenceKmers {
     pub fn vote_orientation(&self, sequence: &str, min_ratio: &f32, min_count: &usize) -> ReadOrientation {
         let mut counts: HashMap<ReadOrientation, usize> = HashMap::new();
         let test_kmers = ReferenceKmers::sequence_to_kmers(sequence, &self.kmer_size);
-        println!("fwd {}",self.kmers_forward.intersection(&test_kmers).collect::<Vec<&String>>().len());
-        println!("rev {}",self.kmers_reverse.intersection(&test_kmers).collect::<Vec<&String>>().len());
         counts.insert(ReadOrientation::FWD, self.kmers_forward.intersection(&test_kmers).collect::<Vec<&String>>().len());
         counts.insert(ReadOrientation::REV, self.kmers_reverse.intersection(&test_kmers).collect::<Vec<&String>>().len());
         match ReferenceKmers::max_key_by_value(&counts).cloned() {
             Some(p) => {
                 let max_key_count = counts[&p];
-                println!("max {}",max_key_count);
                 let total: usize = counts.iter().map(|(_k, v)| v).sum();
-                println!("total {}",total);
-                println!("ratio {}", (max_key_count as f32) / (total as f32));
                 if max_key_count >= *min_count && (max_key_count as f32) / (total as f32) >= *min_ratio {
-                    println!("decide {}", p);
                     p
                 } else {
-                    println!("decide {}", ReadOrientation::UNKNOWN);
                     ReadOrientation::UNKNOWN
                 }
             }
             None => {
-                println!("decide2 {}", ReadOrientation::UNKNOWN);
                 ReadOrientation::UNKNOWN
             }
         }

@@ -124,7 +124,7 @@ fn main() -> std::io::Result<()> {
                 writeln!(output, "{}", str2align)?;
 
                 count += 1;
-                if count % 1 == 0 {
+                if count % 1000 == 0 {
                     println!("Processed {} reads", count);
                 }
             }

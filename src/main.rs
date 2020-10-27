@@ -112,7 +112,8 @@ fn main() -> std::io::Result<()> {
 
         match read_as_chars {
             Some(p) => {
-                let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
+                //let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
+                let alignment = convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
                 //convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
 
                 let str1align: String = alignment.seq_one_aligned.into_iter().collect();

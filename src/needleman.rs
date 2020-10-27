@@ -38,15 +38,15 @@ impl Scores {
 }
 
 
-
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Direction {
     Up,
     Left,
     Diag,
     Done,
 }
+
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
@@ -78,7 +78,6 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
                                mtx: &mut mymatrix::MyMatrix<f64>,
                                trc: &mut mymatrix::MyMatrix<Direction>,
                                scores: &Scores) -> Alignment {
-
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
     // first square
@@ -98,30 +97,23 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
     for ix in 1..seq1_limit {
         for iy in 1..seq2_limit {
             let score = Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores);
-            let up = mtx.get(ix - 1, iy) + scores.gap_ext;
-            let left = mtx.get(ix, iy - 1) + scores.gap_ext;
-            let diag = mtx.get(ix - 1, iy - 1) + score;
 
-            if up > left {
-                if diag < up {
-                    mtx.set(ix, iy, up);
-                    trc.set(ix, iy, Up);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            } else {
-                if diag < left {
-                    mtx.set(ix, iy, left);
-                    trc.set(ix, iy, Left);
-                } else {
-                    mtx.set(ix, iy, diag);
-                    trc.set(ix, iy, Diag);
-                }
-            };
+            let upT = (mtx.get(ix - 1, iy) + scores.gap_ext, Up);
+            let leftT = (mtx.get(ix, iy - 1) + scores.gap_ext, Left);
+            let diagT = (mtx.get(ix - 1, iy - 1) + score, Diag);
+
+            let max = max2(max2(upT, leftT), diagT);
+            mtx.set(ix, iy, max.0);
+            trc.set(ix, iy, max.1);
+
         }
     }
+    //trc.print_matrix(8);
     traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1))
+}
+
+fn max2(x: (f64, Direction), y: (f64, Direction)) -> (f64, Direction) {
+    if x.0 > y.0 { x } else { y }
 }
 
 // a convenience struct for matching movement tuples
@@ -193,6 +185,32 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Di
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+
+    #[test]
+    fn test_max_2() {
+
+        let up = (30.0,Up);
+        let left = (40.0,Left);
+        let diag = (50.0,Diag);
+        let max = max2(max2(diag, left), up);
+        assert!(max.0 == 50.0);
+        assert!(max.1 == Diag);
+
+        let up = (60.0,Up);
+        let left = (40.0,Left);
+        let diag = (50.0,Diag);
+        let max = max2(max2(diag, left), up);
+        assert!(max.0 == 60.0);
+        assert!(max.1 == Up);
+
+        let up = (30.0,Up);
+        let left = (60.0,Left);
+        let diag = (50.0,Diag);
+        let max = max2(max2(diag, left), up);
+        assert!(max.0 == 60.0);
+        assert!(max.1 == Left);
+
+    }
 
     #[test]
     fn test_basic_alignment() {

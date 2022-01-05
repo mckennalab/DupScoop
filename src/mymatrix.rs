@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn basic_size_setup() {
 
-        let mut mtx = MyMatrix::new(10, 5, 0.0);
+        let mtx = MyMatrix::new(10, 5, 0.0);
 
         assert_eq!(mtx.rows(), 10);
         assert_eq!(mtx.cols(), 5);
@@ -136,9 +136,9 @@ mod tests {
         let convert_function = |distance: usize| (-10.0 - ((distance as f64) * 0.1));
 
         mtx.set(3,4, 20.0);
-        let (index, score) = maximize_over_column(&mtx, 4,4, &convert_function);
+        let (_, score) = maximize_over_column(&mtx, 4,4, &convert_function);
         assert_eq!(score,9.9);
-        let (index, score) = maximize_over_row(&mtx, 4,4, &convert_function);
+        let (_, score) = maximize_over_row(&mtx, 4,4, &convert_function);
         assert_eq!(score,-10.1);
 
     }

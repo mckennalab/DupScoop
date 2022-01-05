@@ -1,9 +1,8 @@
 use mymatrix;
-use needleman::Scores;
-use needleman::Alignment;
+use needleman_no_diag::Scores;
+use needleman_no_diag::Alignment;
 
-
-/// Aligns two sequences using the Needleman Wunsch global alignment with simple gap scoring
+#[allow(dead_code)]
 pub fn convex(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores) -> Alignment {
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
@@ -14,6 +13,7 @@ pub fn convex(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores) -> Alignment 
     convex_alignment(seq1, seq2, &mut mtx, &mut trc, scores)
 }
 
+#[allow(dead_code)]
 pub fn convex_alignment(seq1: &Vec<char>,
                         seq2: &Vec<char>,
                         mtx: &mut mymatrix::MyMatrix<f64>,
@@ -22,10 +22,10 @@ pub fn convex_alignment(seq1: &Vec<char>,
 
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
-    assert!(mtx.rows() == seq1_limit);
-    assert!(mtx.cols() == seq2_limit);
-    assert!(trc.rows() == seq1_limit);
-    assert!(trc.cols() == seq2_limit);
+    assert_eq!(mtx.rows(), seq1_limit);
+    assert_eq!(mtx.cols(), seq2_limit);
+    assert_eq!(trc.rows(), seq1_limit);
+    assert_eq!(trc.cols(), seq2_limit);
 
     // TRC is stored as offsets
     // Negative traceback values mean to the left; positive traceback means up,
@@ -168,6 +168,10 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, start_row: usize, start_col
         seq_one: seq1.to_vec(),
         seq_two: seq2.to_vec(),
         score: score,
+        start_x: 0,
+        start_y: 0,
+        end_x: start_row,
+        end_y: start_column,
         seq_one_aligned: alignment1,
         seq_two_aligned: alignment2,
     };
@@ -220,8 +224,6 @@ mod tests {
                                          &mut trc,
                                          &scores);
 
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
         let str1align: String = alignment.seq_one_aligned.into_iter().collect();
         let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 
@@ -243,8 +245,6 @@ mod tests {
                                          &mut trc,
                                          &scores);
 
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
         let str1align: String = alignment.seq_one_aligned.into_iter().collect();
         let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 
@@ -266,12 +266,8 @@ mod tests {
                                          &mut trc,
                                          &scores);
 
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
         let str1align: String = alignment.seq_one_aligned.into_iter().collect();
         let str2align: String = alignment.seq_two_aligned.into_iter().collect();
-        //println!("1 = {}",str1align);
-        //println!("2 = {}",str2align);
         assert_eq!(str2align, "AATAAAGGTGGG");
         assert_eq!(str1align, "AATAAA------");
     }
@@ -290,8 +286,6 @@ mod tests {
                                          &mut trc,
                                          &scores);
 
-        let str1: String = alignment.seq_one.into_iter().collect();
-        let str2: String = alignment.seq_two.into_iter().collect();
         let str1align: String = alignment.seq_one_aligned.into_iter().collect();
         let str2align: String = alignment.seq_two_aligned.into_iter().collect();
 

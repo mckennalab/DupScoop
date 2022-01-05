@@ -1,5 +1,5 @@
 use mymatrix;
-use needleman::Direction::{Left, Up, Diag, Done};
+use needleman_no_diag::Direction::{Left, Up, Diag, Done};
 use std::f64;
 use std::fmt;
 
@@ -20,6 +20,17 @@ impl Scores {
             mismatch_score: -5.0,
             gap_open: -10.0,
             gap_ext: -6.0,
+            gap_start: -10.0,
+            gap_end: -10.0,
+        }
+    }
+
+    pub fn plasmid_aligmment_scores() -> Scores {
+        Scores {
+            match_score: 1.0,
+            mismatch_score: -1.0,
+            gap_open: -10.0,
+            gap_ext: -1.0,
             gap_start: -10.0,
             gap_end: -10.0,
         }
@@ -58,6 +69,10 @@ pub struct Alignment {
     pub seq_one: Vec<char>,
     pub seq_two: Vec<char>,
     pub score: f64,
+    pub start_x: usize,
+    pub start_y: usize,
+    pub end_x: usize,
+    pub end_y: usize,
     pub seq_one_aligned: Vec<char>,
     pub seq_two_aligned: Vec<char>,
 }
@@ -68,7 +83,7 @@ pub fn needleman_wunsch(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores) -> 
     let seq2_limit = seq2.len() + 1;
 
     let mut mtx = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, 0.0);
-    //println!("made matrix of {} {}", mtx.rows(), mtx.cols());
+    println!("made matrix of {} {}", mtx.rows(), mtx.cols());
     let mut trc: mymatrix::MyMatrix<Direction> = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, Done);
     needleman_wunsch_borrow(seq1, seq2, &mut mtx, &mut trc, scores)
 }
@@ -93,24 +108,25 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
         trc.set(0, n, Left);
     }
 
-    let top_score  = 0.0;
-    let topx = 0;
-    let topy = 0;
 
     // fill in the matrix
     for ix in 1..seq1_limit {
         for iy in 1..seq2_limit {
-            let score = if (ix == iy) {0.0} else {Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores)};
+            let score = Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores);
+            if (ix == iy || ((iy % seq1.len()) == ix) || ((ix % seq2.len()) == iy)) && ix % 100 == 0 {
+                println!("NOGO is from {},{}", ix, iy);
+            }
+            let up_t = (mtx.get(ix - 1, iy) + scores.gap_ext, Up);
+            let left_t = (mtx.get(ix, iy - 1) + scores.gap_ext, Left);
+            //let diagT = (if (ix == iy || ((iy % seq1.len()) == ix) || ((ix % seq2.len()) == iy)) {0.0} else {(mtx.get(ix - 1, iy - 1) + score)}, Diag);
+            let diag_t = (mtx.get(ix - 1, iy - 1) + score, Diag);
 
-            let upT = (mtx.get(ix - 1, iy) + scores.gap_ext, Up);
-            let leftT = (mtx.get(ix, iy - 1) + scores.gap_ext, Left);
-            let diagT = (mtx.get(ix - 1, iy - 1) + score, Diag);
+            //let max = max2(max2(max2(upT, leftT), diagT), (0.0,Diag));
+            let max = max2(max2(up_t, left_t), diag_t);
 
-            let max = max2(max2(max2(upT, leftT), diagT), (0.0,Diag));
-            if (max.0 > top_score) {
-                let top_score = max.0;
-                let topx = ix;
-                let topy = iy;
+
+            if ix % 1000 == 0 && iy % 1000 == 0 {
+                println!("top is now {} from {},{}", max.0, ix, iy);
             }
 
             mtx.set(ix, iy, max.0);
@@ -119,9 +135,10 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
         }
     }
     //trc.print_matrix(8);
-    traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1), top_score, topx, topy)
+    traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1), seq1_limit - 1, seq2_limit - 1)
 }
 
+#[inline]
 fn max2(x: (f64, Direction), y: (f64, Direction)) -> (f64, Direction) {
     if x.0 > y.0 { x } else { y }
 }
@@ -135,18 +152,17 @@ struct TruthSet {
 }
 
 /// traceback a matrix into an alignment struct
-pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Direction>, score: f64, top_score: f64, topx: usize, topy: usize) -> Alignment {
+pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Direction>, top_score: f64, topx: usize, topy: usize) -> Alignment {
     assert_eq!(seq1.len(), trc.rows() - 1, "The matrix doesn't have the right number of rows; rows: {}, expected: {}", seq1.len(), trc.rows() - 1);
     assert_eq!(seq2.len(), trc.cols() - 1, "The matrix doesn't have the right number of columns; columns: {}, expected: {}", seq2.len(), trc.cols() - 1);
 
     let mut alignment1 = Vec::new();
     let mut alignment2 = Vec::new();
 
-    let mut row_index = topx;
-    let mut column_index = topy;
+    let mut row_index = seq1.len(); // topx;
+    let mut column_index = seq2.len(); // topx;
 
     let gap = '-';
-    //trc.print_matrix();
 
     let mut current_pointer = trc.get(row_index, column_index);
 
@@ -185,7 +201,11 @@ pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Di
     return Alignment {
         seq_one: seq1.to_vec(),
         seq_two: seq2.to_vec(),
-        score: score,
+        score: top_score,
+        start_x: row_index,
+        start_y: column_index,
+        end_x: topx,
+        end_y: topy,
         seq_one_aligned: alignment1,
         seq_two_aligned: alignment2,
     };
@@ -203,22 +223,22 @@ mod tests {
         let left = (40.0,Left);
         let diag = (50.0,Diag);
         let max = max2(max2(diag, left), up);
-        assert!(max.0 == 50.0);
-        assert!(max.1 == Diag);
+        assert_eq!(max.0, 50.0);
+        assert_eq!(max.1, Diag);
 
         let up = (60.0,Up);
         let left = (40.0,Left);
         let diag = (50.0,Diag);
         let max = max2(max2(diag, left), up);
-        assert!(max.0 == 60.0);
-        assert!(max.1 == Up);
+        assert_eq!(max.0, 60.0);
+        assert_eq!(max.1, Up);
 
         let up = (30.0,Up);
         let left = (60.0,Left);
         let diag = (50.0,Diag);
         let max = max2(max2(diag, left), up);
-        assert!(max.0 == 60.0);
-        assert!(max.1 == Left);
+        assert_eq!(max.0, 60.0);
+        assert_eq!(max.1, Left);
 
     }
 
@@ -240,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn test_basic_alignment_Ns() {
+    fn test_basic_alignment_ns() {
         let scores = Scores::default_scores();
         let alignment = needleman_wunsch(&vec!['A', 'N', 'A'], &vec!['A', 'T', 'A'], &scores);
 
@@ -343,6 +363,10 @@ mod tests {
         assert_eq!(str2align, "-GG--TAA");
     }
 
+    
+
+
+
     #[test]
     fn test_large_alignment() {
         let scores = Scores::default_scores();
@@ -351,8 +375,8 @@ mod tests {
         let str1 = vec!['A'; size];
         let str2 = vec!['A'; size];
 
-        for i in 0..1000 {
-            let alignment = needleman_wunsch(&str1, &str2, &scores);
+        for _ in 0..1000 {
+            let _alignment = needleman_wunsch(&str1, &str2, &scores);
         }
 
         // assert_eq!(alignment.score, (size as f64)  * scores.match_score);

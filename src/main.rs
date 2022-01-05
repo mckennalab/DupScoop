@@ -2,8 +2,8 @@ mod convex;
 mod kmer_orientation;
 mod score_matrix;
 pub mod mymatrix;
-pub mod needleman_no_diag;
-pub mod smith_waterman;
+pub mod needleman;
+pub mod smith_waterman_no_diag;
 
 extern crate bio;
 extern crate clap;
@@ -14,7 +14,7 @@ extern crate string_builder;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Write};
-use needleman_no_diag::{Scores};
+use needleman::{Scores};
 use clap::{Arg, App};
 
 
@@ -115,7 +115,7 @@ fn main() -> std::io::Result<()> {
 
     let mut count = 0;
 
-    let alignment = smith_waterman::smith_waterman_no_diag(&reference_as_chars, &read_as_chars, &scores, 10);
+    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference_as_chars, &read_as_chars, &scores, 10);
                 
     let str1align: String = alignment.seq_one_aligned.into_iter().collect();
     let str2align: String = alignment.seq_two_aligned.into_iter().collect();

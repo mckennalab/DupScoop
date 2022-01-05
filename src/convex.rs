@@ -1,6 +1,6 @@
 use mymatrix;
-use needleman_no_diag::Scores;
-use needleman_no_diag::Alignment;
+use needleman::Scores;
+use needleman::Alignment;
 
 #[allow(dead_code)]
 pub fn convex(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Scores) -> Alignment {

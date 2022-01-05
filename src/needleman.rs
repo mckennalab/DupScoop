@@ -1,5 +1,5 @@
 use mymatrix;
-use needleman_no_diag::Direction::{Left, Up, Diag, Done};
+use needleman::Direction::{Left, Up, Diag, Done};
 use std::f64;
 use std::fmt;
 

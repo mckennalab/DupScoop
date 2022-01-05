@@ -1,3 +1,4 @@
+mod sequence_extractor;
 mod convex;
 mod kmer_orientation;
 mod score_matrix;
@@ -7,8 +8,8 @@ pub mod needleman;
 extern crate bio;
 extern crate clap;
 extern crate csv;
-
 extern crate matrix;
+extern crate string_builder;
 
 use std::str;
 use std::fs::File;
@@ -112,8 +113,8 @@ fn main() -> std::io::Result<()> {
 
         match read_as_chars {
             Some(p) => {
-                //let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
-                let alignment = convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
+                let alignment = needleman::needleman_wunsch(&reference_as_chars, &p.chars().collect(), &scores);
+                //let alignment = convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
                 //convex::convex(&reference_as_chars, &p.chars().collect(), &scores);
 
                 let str1align: String = alignment.seq_one_aligned.into_iter().collect();

@@ -19,6 +19,7 @@ pub fn convex_alignment(seq1: &Vec<char>,
                         mtx: &mut mymatrix::MyMatrix<f64>,
                         trc: &mut mymatrix::MyMatrix<i32>,
                         scores: &Scores) -> Alignment {
+
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
     assert!(mtx.rows() == seq1_limit);

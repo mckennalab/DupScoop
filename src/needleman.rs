@@ -93,23 +93,33 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
         trc.set(0, n, Left);
     }
 
+    let top_score  = 0.0;
+    let topx = 0;
+    let topy = 0;
+
     // fill in the matrix
     for ix in 1..seq1_limit {
         for iy in 1..seq2_limit {
-            let score = Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores);
+            let score = if (ix == iy) {0.0} else {Scores::scoring_function(seq1[ix - 1], seq2[iy - 1], scores)};
 
             let upT = (mtx.get(ix - 1, iy) + scores.gap_ext, Up);
             let leftT = (mtx.get(ix, iy - 1) + scores.gap_ext, Left);
             let diagT = (mtx.get(ix - 1, iy - 1) + score, Diag);
 
-            let max = max2(max2(upT, leftT), diagT);
+            let max = max2(max2(max2(upT, leftT), diagT), (0.0,Diag));
+            if (max.0 > top_score) {
+                let top_score = max.0;
+                let topx = ix;
+                let topy = iy;
+            }
+
             mtx.set(ix, iy, max.0);
             trc.set(ix, iy, max.1);
 
         }
     }
     //trc.print_matrix(8);
-    traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1))
+    traceback(seq1, seq2, trc, mtx.get(seq1_limit - 1, seq2_limit - 1), top_score, topx, topy)
 }
 
 fn max2(x: (f64, Direction), y: (f64, Direction)) -> (f64, Direction) {
@@ -125,15 +135,15 @@ struct TruthSet {
 }
 
 /// traceback a matrix into an alignment struct
-pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Direction>, score: f64) -> Alignment {
+pub fn traceback(seq1: &Vec<char>, seq2: &Vec<char>, trc: &mymatrix::MyMatrix<Direction>, score: f64, top_score: f64, topx: usize, topy: usize) -> Alignment {
     assert_eq!(seq1.len(), trc.rows() - 1, "The matrix doesn't have the right number of rows; rows: {}, expected: {}", seq1.len(), trc.rows() - 1);
     assert_eq!(seq2.len(), trc.cols() - 1, "The matrix doesn't have the right number of columns; columns: {}, expected: {}", seq2.len(), trc.cols() - 1);
 
     let mut alignment1 = Vec::new();
     let mut alignment2 = Vec::new();
 
-    let mut row_index = seq1.len();
-    let mut column_index = seq2.len();
+    let mut row_index = topx;
+    let mut column_index = topy;
 
     let gap = '-';
     //trc.print_matrix();

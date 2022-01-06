@@ -9,6 +9,7 @@ clap = "~2.32"
 csv = "1"
 matrix = "*"
 string-builder = "0.2.0"
+indicatif = "*"
 
 [profile.release]
 debug = true

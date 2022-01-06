@@ -1,2 +1,3 @@
-# rust_aligner
-A framework for read alignment, written in Rust
+# DupScoop
+
+A tool to detect duplicated regions within circular plasmids. 

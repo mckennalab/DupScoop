@@ -1,4 +1,5 @@
 use std::f64;
+use indicatif::ProgressBar;
 
 use mymatrix;
 use needleman::Alignment;
@@ -12,7 +13,7 @@ pub fn smith_waterman_no_diag(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Score
     let seq2_limit = seq2.len() + 1;
 
     let mut mtx = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, 0.0);
-    println!("made matrix of {} {}", mtx.rows(), mtx.cols());
+    println!("Created an alignment matrix of size [{},{}]", mtx.rows(), mtx.cols());
     let mut trc: mymatrix::MyMatrix<Direction> = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, Done);
     smith_waterman_no_diag_borrow(seq1, seq2, &mut mtx, &mut trc, scores, min_diag_distance)
 }
@@ -43,6 +44,9 @@ pub fn smith_waterman_no_diag_borrow(seq1: &Vec<char>,
     let mut topx = 0;
     let mut topy = 0;
 
+    println!("Aligning...");
+    let bar = indicatif::ProgressBar::new(seq1_limit as u64);
+
     // fill in the matrix
     for ix in 1..seq1_limit {
         for iy in 1..seq2_limit {
@@ -64,17 +68,14 @@ pub fn smith_waterman_no_diag_borrow(seq1: &Vec<char>,
                 max = (0.0, max.1);
             }
 
-
-            if ix % 10000 == 0 && iy % 10000 == 0 {
-                println!("top is now {} from {},{}", top_score, ix, iy);
-            }
-
             mtx.set(ix, iy, max.0);
             trc.set(ix, iy, max.1);
         }
+        bar.inc(1);
     }
-    trc.print_matrix(8);
-    println!("max isnow from {},{}", topx, topy);
+    bar.finish();
+    //trc.print_matrix(8);
+    //println!("max isnow from {},{}", topx, topy);
     traceback(seq1, seq2, trc, mtx, top_score, topx, topy)
 }
 
@@ -108,7 +109,7 @@ pub fn traceback(seq1: &Vec<char>,
     let mut row_index = topx;
     let mut column_index = topy;
 
-    println!("Tops: {},{} score {}", topx, topy, top_score);
+    //println!("Tops: {},{} score {}", topx, topy, top_score);
 
     let gap = '-';
     //trc.print_matrix(4);
@@ -153,7 +154,7 @@ pub fn traceback(seq1: &Vec<char>,
 
     alignment1.reverse();
     alignment2.reverse();
-    println!("{},{}", alignment1.len(), alignment2.len());
+    println!("Alignment lengths of {} and {}", alignment1.len(), alignment2.len());
     return Alignment {
         seq_one: seq1.to_vec(),
         seq_two: seq2.to_vec(),

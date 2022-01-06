@@ -10,12 +10,15 @@ extern crate clap;
 extern crate csv;
 extern crate matrix;
 extern crate string_builder;
+extern crate indicatif;
 
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Write};
-use needleman::{Scores};
+use needleman::{Scores, Alignment};
 use clap::{Arg, App};
+use std::cmp::min;
+use std::iter::FromIterator;
 
 
 fn main() -> std::io::Result<()> {
@@ -35,12 +38,6 @@ fn main() -> std::io::Result<()> {
              .value_name("FILE")
              .help("the alignment output file")
              .takes_value(true))
-        .arg(Arg::with_name("aligner")
-             .short("a")
-             .long("aligner")
-             .value_name("STRING")
-             .help("the alignment method")
-             .takes_value(true))
         .arg(Arg::with_name("minLength")
             .short("m")
             .long("min")
@@ -55,24 +52,102 @@ fn main() -> std::io::Result<()> {
             .takes_value(true))
         .get_matches();
 
-    // pull out the command line arguments and setup input and output
-    // ----------------------------------------------------------------
-    let input_file = matches.value_of("input").unwrap_or("input.fq");
     let output_file = matches.value_of("output").unwrap_or("output.fa");
     let reference_file = matches.value_of("reference").unwrap_or("reference.fa");
-    let read_file = matches.value_of("input").unwrap_or("reference.fa");
-    let aligner = matches.value_of("aligner").unwrap_or("swa");
-    println!("input : {}, output : {} aligner : {}",input_file, output_file, aligner);
 
-    // read in the reference, and covert to a string
-    // ----------------------------------------------------------------
+    let min_score_prop: f64 = matches.value_of("minScoreProportion").unwrap_or("0.9").parse::<f64>().unwrap();
+    let min_length: u64 = matches.value_of("minLength").unwrap_or("1000").parse::<u64>().unwrap();
+
+    let reference_as_chars = reference_to_sequence(reference_file).unwrap();
+    let mut reference_as_chars_duplicated = reference_to_sequence(&reference_file).unwrap();
+    let mut refClone = reference_as_chars_duplicated.clone();
+    reference_as_chars_duplicated.append(&mut refClone);
+
+    let scores = Scores::plasmid_aligmment_scores();
+
+    let mut output = File::create(output_file).unwrap();
+
+    let check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores);
+    if check_dups.0 {
+        let rotated_reference = rotate_reference(&reference_as_chars,  check_dups.1);
+        let resulting_reference = String::from_iter(align_and_remove_dup(&rotated_reference, min_score_prop, min_length, &scores));
+        println!("Dup!");
+        writeln!(output,">reference\n{}\n",resulting_reference);
+    } else {
+        println!("No dups found!");
+        writeln!(output,">reference\n{}\n",String::from_iter(reference_as_chars));
+    }
+
+    Ok(())
+}
+
+fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores) -> Vec<char> {
+    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference, &scores, 10);
+    let seq_one_aligned= String::from_iter(alignment.seq_one_aligned.into_iter().filter(|&x| x != '-'));
+    let seq_two_aligned= String::from_iter(alignment.seq_two_aligned.into_iter().filter(|&x| x != '-'));
+    let min_size = min(seq_one_aligned.len(), seq_two_aligned.len());
+
+    let mut start_del = alignment.start_x;
+    let mut end_del = alignment.end_x;
+    println!("Alignment starts and stops {},{} and {},{} with lengths {} and {}, sequences {} and {}",alignment.start_x,
+             alignment.end_x,
+             alignment.start_y,
+             alignment.end_y,
+             seq_one_aligned.len(),
+             seq_two_aligned.len(),
+             seq_one_aligned,
+             seq_two_aligned);
+
+    if seq_two_aligned.len() == min_size {
+        start_del = alignment.start_y;
+        end_del = alignment.end_y;
+    }
+    let split_at_start = reference.split_at(start_del);
+    let mut first_half: Vec<char> = split_at_start.0.to_vec();
+    let mut second_half: Vec<char> = split_at_start.1[(end_del-start_del)..].to_vec();
+    first_half.append(&mut second_half);
+    first_half
+
+}
+
+fn rotate_reference(reference: &Vec<char>,offset: usize) -> Vec<char> {
+    let mut new_ref = reference.clone();
+    new_ref.rotate_right(offset);
+    new_ref
+}
+
+fn aligned_distance(alignment: Alignment) -> u32 {
+    let it = alignment.seq_one_aligned.iter().zip(alignment.seq_two_aligned.iter());
+    let mut differences = 0;
+    for (i, (x, y)) in it.enumerate() {
+        if x.to_uppercase().to_string() != y.to_uppercase().to_string() {
+            differences += 1
+        }
+    }
+    differences
+}
+
+fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores) -> (bool, usize) {
+    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference_dup, &scores, 10);
+    let length_one = alignment.end_x - alignment.start_x;
+    let length_two = alignment.end_y - alignment.start_y;
+    let min_size = min(length_one, length_two);
+
+    let seq1_aligned_len = alignment.seq_one_aligned.len() as f64;
+    let start_y = alignment.start_y;
+    let differences = aligned_distance(alignment);
+    let matching_prop = 1.0 - (differences as f64/ seq1_aligned_len);
+    (min_size > min_length as usize && min_score_prop < matching_prop,start_y)
+}
+
+fn reference_to_sequence(reference_file: &str) -> Result< Vec<char>, std::io::Error> {
     let mut file = File::open(reference_file)?;
     let mut reference = String::new();
     file.read_to_string(&mut reference)?;
 
     // slice off the first line (name), and combine the rest into a single string of characters
     let first_line_marker = reference.find("\n");
-    println!("first endline: {}" ,first_line_marker.unwrap());
+    println!("first endline: {}", first_line_marker.unwrap());
 
     match first_line_marker {
         // The division was valid
@@ -80,60 +155,10 @@ fn main() -> std::io::Result<()> {
             reference = reference.split_off(x).replace("\n", "");
         }
         // The division was invalid
-        None    => panic!("We couldn't find the reference name in your input file {}", input_file),
+        None => panic!("We couldn't find the reference name in your input file {}", reference_file),
     }
 
     let reference_as_chars: Vec<char> = reference.to_string().chars().collect();
-
-    //let kmer_orientation = ReferenceKmers::generate_kmers(&reference,&20);
-
-
-    // read in sequences and align them
-    // ----------------------------------------------------------------
-    let scores = Scores::default_scores();
-    
-    let mut file = File::open(read_file)?;
-    let mut read = String::new();
-    file.read_to_string(&mut read)?;
-
-    // slice off the first line (name), and combine the rest into a single string of characters
-    let first_line_marker = read.find("\n");
-    println!("first endline: {}" ,first_line_marker.unwrap());
-
-    match first_line_marker {
-        // The division was valid
-        Some(x) => {
-            read = read.split_off(x).replace("\n", "");
-        }
-        // The division was invalid
-        None    => panic!("We couldn't find the reference name in your input file {}", input_file),
-    }
-
-    let read_as_chars: Vec<char> = read.to_string().chars().collect();
-
-    let mut output = File::create(output_file).unwrap();
-
-    let mut count = 0;
-
-    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference_as_chars, &read_as_chars, &scores, 10);
-                
-    let str1align: String = alignment.seq_one_aligned.into_iter().collect();
-    let str2align: String = alignment.seq_two_aligned.into_iter().collect();
-    println!("From {},{} to {},{}",alignment.start_x,alignment.start_y,alignment.end_x,alignment.end_y);
-    writeln!(output, ">{}", "ref")?;
-    writeln!(output, "{}", str1align)?;
-    writeln!(output, ">{}", "read")?;
-    writeln!(output, "{}", str2align)?;
-
-    count += 1;
-    if count % 1000 == 0 {
-        println!("Processed {} reads", count);
-    }
-
-    
-    //output.close();
-
-    // we're ok!
-    Ok(())
+    Ok(reference_as_chars)
 }
 

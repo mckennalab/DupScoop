@@ -89,7 +89,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
 
     let mut start_del = alignment.start_x;
     let mut end_del = alignment.end_x;
-    println!("Alignment starts and stops {},{} and {},{} with lengths {} and {}, sequences {} and {}",alignment.start_x,
+    /*println!("Alignment starts and stops {},{} and {},{} with lengths {} and {}, sequences {} and {}",alignment.start_x,
              alignment.end_x,
              alignment.start_y,
              alignment.end_y,
@@ -97,7 +97,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
              seq_two_aligned.len(),
              seq_one_aligned,
              seq_two_aligned);
-
+    */
     if seq_two_aligned.len() == min_size {
         start_del = alignment.start_y;
         end_del = alignment.end_y;

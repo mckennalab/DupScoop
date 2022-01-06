@@ -44,7 +44,7 @@ pub fn smith_waterman_no_diag_borrow(seq1: &Vec<char>,
     let mut topx = 0;
     let mut topy = 0;
 
-    println!("Aligning...");
+    println!("Aligning (status by rows)...");
     let bar = indicatif::ProgressBar::new(seq1_limit as u64);
 
     // fill in the matrix

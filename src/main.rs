@@ -83,21 +83,23 @@ fn main() -> std::io::Result<()> {
 
 fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores) -> Vec<char> {
     let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference, &scores, 10);
-    let seq_one_aligned= String::from_iter(alignment.seq_one_aligned.into_iter().filter(|&x| x != '-'));
-    let seq_two_aligned= String::from_iter(alignment.seq_two_aligned.into_iter().filter(|&x| x != '-'));
+    let seq_one_aligned= String::from_iter(alignment.seq_one_aligned.clone().into_iter().filter(|&x| x != '-'));
+    let seq_two_aligned= String::from_iter(alignment.seq_two_aligned.clone().into_iter().filter(|&x| x != '-'));
     let min_size = min(seq_one_aligned.len(), seq_two_aligned.len());
 
     let mut start_del = alignment.start_x;
     let mut end_del = alignment.end_x;
-    /*println!("Alignment starts and stops {},{} and {},{} with lengths {} and {}, sequences {} and {}",alignment.start_x,
+    /*println!("Alignment starts and stops {},{} and {},{} with lengths {} and {}, sequences {} and {} from {} and {}",alignment.start_x,
              alignment.end_x,
              alignment.start_y,
              alignment.end_y,
              seq_one_aligned.len(),
              seq_two_aligned.len(),
              seq_one_aligned,
-             seq_two_aligned);
-    */
+             seq_two_aligned,
+             String::from_iter(alignment.seq_one_aligned),
+             String::from_iter(alignment.seq_two_aligned));*/
+
     if seq_two_aligned.len() == min_size {
         start_del = alignment.start_y;
         end_del = alignment.end_y;

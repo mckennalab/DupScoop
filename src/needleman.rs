@@ -29,7 +29,7 @@ impl Scores {
         Scores {
             match_score: 5.0,
             mismatch_score: -1.0,
-            gap_open: -10.0,
+            gap_open: -50.0,
             gap_ext: -0.5,
             gap_start: -10.0,
             gap_end: -10.0,

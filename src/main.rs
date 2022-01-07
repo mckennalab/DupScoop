@@ -70,7 +70,7 @@ fn main() -> std::io::Result<()> {
     let mut refClone = reference_as_chars_duplicated.clone();
     reference_as_chars_duplicated.append(&mut refClone);
 
-    let scores = Scores::plasmid_aligmment_scores();
+    let scores = Scores::default_scores();
 
     let mut output = File::create(output_file).unwrap();
 

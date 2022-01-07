@@ -211,4 +211,19 @@ mod tests {
         assert_eq!(str1align, "AC");
         assert_eq!(str2align, "AC");
     }
+    #[test]
+    fn test_offset_best() {
+        let scores = Scores::default_scores();
+        let alignment = smith_waterman_no_diag(&vec!['T','T','A', 'C', 'G', 'T', 'A', 'C','A', 'C', 'G', 'T', 'A', 'C'], &vec!['A', 'C', 'G', 'T', 'A', 'C','A', 'C', 'G', 'T', 'A', 'C'], &scores, 1);
+
+        let str1: String = alignment.seq_one.into_iter().collect();
+        let str2: String = alignment.seq_two.into_iter().collect();
+        let str1align: String = alignment.seq_one_aligned.into_iter().collect();
+        let str2align: String = alignment.seq_two_aligned.into_iter().collect();
+        println!("{},{}", str1align, str2align);
+
+        assert_eq!(alignment.score, 12.0 * scores.match_score);
+        assert_eq!(str1align, "ACGTACACGTAC");
+        assert_eq!(str2align, "ACGTACACGTAC");
+    }
 }

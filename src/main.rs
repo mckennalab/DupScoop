@@ -95,7 +95,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
 
     let mut start_del = alignment.start_x;
     let mut end_del = alignment.end_x;
-    println!("Alignment starts and stops {},{} with score {}, and {},{} with lengths {} and {}, sequences {} and {} from {} and {}",alignment.start_x,
+    /*println!("Alignment starts and stops {},{} with score {}, and {},{} with lengths {} and {}, sequences {} and {} from {} and {}",alignment.start_x,
              alignment.end_x,
              alignment.score,
              alignment.start_y,
@@ -106,7 +106,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
              seq_two_aligned,
              String::from_iter(alignment.seq_one_aligned),
              String::from_iter(alignment.seq_two_aligned));
-
+*/
     // delete the smallest chunk possible
     if alignment.start_y > alignment.start_x {
         if seq_two_aligned.len() == min_size {
@@ -126,7 +126,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
             end_del = alignment.end_y;
         }
     }
-    
+
     let split_at_start = reference.split_at(start_del);
     let mut first_half: Vec<char> = split_at_start.0.to_vec();
     println!("First half length {} and cut point {}",first_half.len(), start_del);
@@ -169,7 +169,7 @@ fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, 
     let differences = aligned_distance(&alignment);
     let matching_prop = 1.0 - (differences as f64/ seq1_aligned_len);
 
-
+/*
     println!("PRE starts and stops {},{} with score {}, and {},{} with lengths {} and {}, sequences {} and {} from {} and {}",alignment.start_x,
              alignment.end_x,
              alignment.score,
@@ -181,7 +181,7 @@ fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, 
              seq_two_aligned,
              String::from_iter(seq1_aligned),
              String::from_iter(seq2_aligned));
-
+*/
     (min_size > min_length as usize && min_score_prop < matching_prop,start_y)
 }
 

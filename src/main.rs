@@ -108,7 +108,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
              String::from_iter(alignment.seq_one_aligned),
              String::from_iter(alignment.seq_two_aligned));
 
-    if seq_two_aligned.len() != min_size {
+    if seq_two_aligned.len() == min_size {
         start_del = alignment.start_y;
         end_del = alignment.end_y;
     }

@@ -186,7 +186,7 @@ fn reference_to_sequence(reference_file: &str) -> Result< Vec<char>, std::io::Er
         None => panic!("We couldn't find the reference name in your input file {}", reference_file),
     }
 
-    let reference_as_chars: Vec<char> = reference.to_string().chars().collect();
+    let reference_as_chars: Vec<char> = reference.to_string().to_uppercase().chars().collect();
     Ok(reference_as_chars)
 }
 

@@ -93,6 +93,7 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
                                mtx: &mut mymatrix::MyMatrix<f64>,
                                trc: &mut mymatrix::MyMatrix<Direction>,
                                scores: &Scores) -> Alignment {
+
     let seq1_limit = seq1.len() + 1;
     let seq2_limit = seq2.len() + 1;
     // first square
@@ -118,7 +119,6 @@ pub fn needleman_wunsch_borrow(seq1: &Vec<char>,
             }
             let up_t = (mtx.get(ix - 1, iy) + scores.gap_ext, Up);
             let left_t = (mtx.get(ix, iy - 1) + scores.gap_ext, Left);
-            //let diagT = (if (ix == iy || ((iy % seq1.len()) == ix) || ((ix % seq2.len()) == iy)) {0.0} else {(mtx.get(ix - 1, iy - 1) + score)}, Diag);
             let diag_t = (mtx.get(ix - 1, iy - 1) + score, Diag);
 
             //let max = max2(max2(max2(upT, leftT), diagT), (0.0,Diag));

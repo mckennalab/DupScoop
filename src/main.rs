@@ -50,6 +50,12 @@ fn main() -> std::io::Result<()> {
             .value_name("FLOAT")
             .help("the score ")
             .takes_value(true))
+        .arg(Arg::with_name("minDiagDistance")
+            .short("d")
+            .long("diagonaldist")
+            .value_name("INT")
+            .help("the score ")
+            .takes_value(true))
         .get_matches();
 
     let output_file = matches.value_of("output").unwrap_or("output.fa");
@@ -57,6 +63,7 @@ fn main() -> std::io::Result<()> {
 
     let min_score_prop: f64 = matches.value_of("minScoreProportion").unwrap_or("0.9").parse::<f64>().unwrap();
     let min_length: u64 = matches.value_of("minLength").unwrap_or("1000").parse::<u64>().unwrap();
+    let diag_dist: i32 = matches.value_of("minDiagDistance").unwrap_or("10").parse::<i32>().unwrap();
 
     let reference_as_chars = reference_to_sequence(reference_file).unwrap();
     let mut reference_as_chars_duplicated = reference_to_sequence(&reference_file).unwrap();
@@ -67,10 +74,10 @@ fn main() -> std::io::Result<()> {
 
     let mut output = File::create(output_file).unwrap();
 
-    let check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores);
+    let check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
     if check_dups.0 {
         let rotated_reference = rotate_reference(&reference_as_chars,  check_dups.1);
-        let resulting_reference = String::from_iter(align_and_remove_dup(&rotated_reference, min_score_prop, min_length, &scores));
+        let resulting_reference = String::from_iter(align_and_remove_dup(&rotated_reference, min_score_prop, min_length, &scores, diag_dist));
         println!("Dup!");
         writeln!(output,">reference\n{}\n",resulting_reference);
     } else {
@@ -81,8 +88,8 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores) -> Vec<char> {
-    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference, &scores, 10);
+fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores, diag_dist: i32) -> Vec<char> {
+    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference, &scores, diag_dist);
     let seq_one_aligned= String::from_iter(alignment.seq_one_aligned.clone().into_iter().filter(|&x| x != '-'));
     let seq_two_aligned= String::from_iter(alignment.seq_two_aligned.clone().into_iter().filter(|&x| x != '-'));
     let min_size = min(seq_one_aligned.len(), seq_two_aligned.len());
@@ -130,8 +137,8 @@ fn aligned_distance(alignment: &Alignment) -> u32 {
     differences
 }
 
-fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores) -> (bool, usize) {
-    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference_dup, &scores, 10);
+fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, min_score_prop: f64, min_length: u64, scores: &Scores, diag_dist: i32) -> (bool, usize) {
+    let alignment = smith_waterman_no_diag::smith_waterman_no_diag(&reference, &reference_dup, &scores, diag_dist);
     let length_one = alignment.end_x - alignment.start_x;
     let length_two = alignment.end_y - alignment.start_y;
     let min_size = min(length_one, length_two);

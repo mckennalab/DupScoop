@@ -13,6 +13,7 @@ pub fn smith_waterman_no_diag(seq1: &Vec<char>, seq2: &Vec<char>, scores: &Score
     let seq2_limit = seq2.len() + 1;
 
     let mut mtx = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, 0.0);
+
     println!("Created an alignment matrix of size [{},{}]", mtx.rows(), mtx.cols());
     let mut trc: mymatrix::MyMatrix<Direction> = mymatrix::MyMatrix::new(seq1_limit, seq2_limit, Done);
     smith_waterman_no_diag_borrow(seq1, seq2, &mut mtx, &mut trc, scores, min_diag_distance)
@@ -64,7 +65,9 @@ pub fn smith_waterman_no_diag_borrow(seq1: &Vec<char>,
                 topx = ix;
                 topy = iy;
             }
-            if (ix as i32 - iy as i32 ).abs() < min_diag_distance || ((iy as i32 % seq1.len()as i32 ) - ix as i32).abs() < min_diag_distance || ((ix as i32 % seq2.len() as i32) - iy as i32).abs() < min_diag_distance {
+            if (ix as i32 - iy as i32 ).abs() < min_diag_distance ||
+                ((iy as i32 % seq1.len() as i32) - ix as i32).abs() < min_diag_distance ||
+                ((ix as i32 % seq2.len() as i32) - iy as i32).abs() < min_diag_distance {
                 max = (0.0, max.1);
             }
 

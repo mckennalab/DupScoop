@@ -119,7 +119,7 @@ fn rotate_reference(reference: &Vec<char>,offset: usize) -> Vec<char> {
     new_ref
 }
 
-fn aligned_distance(alignment: Alignment) -> u32 {
+fn aligned_distance(alignment: &Alignment) -> u32 {
     let it = alignment.seq_one_aligned.iter().zip(alignment.seq_two_aligned.iter());
     let mut differences = 0;
     for (i, (x, y)) in it.enumerate() {
@@ -135,11 +135,29 @@ fn check_for_duplicate_region(reference: &Vec<char>, reference_dup: &Vec<char>, 
     let length_one = alignment.end_x - alignment.start_x;
     let length_two = alignment.end_y - alignment.start_y;
     let min_size = min(length_one, length_two);
+    let seq_one_aligned= String::from_iter(alignment.seq_one_aligned.clone().into_iter().filter(|&x| x != '-'));
+    let seq_two_aligned= String::from_iter(alignment.seq_two_aligned.clone().into_iter().filter(|&x| x != '-'));
 
-    let seq1_aligned_len = alignment.seq_one_aligned.len() as f64;
+    let seq1_aligned_len = alignment.seq_one_aligned.clone().len() as f64;
+    let seq1_aligned = alignment.seq_one_aligned.clone();
+    let seq2_aligned = alignment.seq_two_aligned.clone();
     let start_y = alignment.start_y;
-    let differences = aligned_distance(alignment);
+    let differences = aligned_distance(&alignment);
     let matching_prop = 1.0 - (differences as f64/ seq1_aligned_len);
+
+
+    println!("PRE starts and stops {},{} with score {}, and {},{} with lengths {} and {}, sequences {} and {} from {} and {}",alignment.start_x,
+             alignment.end_x,
+             alignment.score,
+             alignment.start_y,
+             alignment.end_y,
+             seq_one_aligned.len(),
+             seq_two_aligned.len(),
+             seq_one_aligned,
+             seq_two_aligned,
+             String::from_iter(seq1_aligned),
+             String::from_iter(seq2_aligned));
+
     (min_size > min_length as usize && min_score_prop < matching_prop,start_y)
 }
 

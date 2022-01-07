@@ -17,9 +17,8 @@ use std::io::prelude::*;
 use std::io::{Write};
 use needleman::{Scores, Alignment};
 use clap::{Arg, App};
-use std::cmp::min;
+use std::cmp::{min,max};
 use std::iter::FromIterator;
-
 
 fn main() -> std::io::Result<()> {
     let matches = App::new("DupScoop")
@@ -108,10 +107,26 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
              String::from_iter(alignment.seq_one_aligned),
              String::from_iter(alignment.seq_two_aligned));
 
-    if seq_two_aligned.len() == min_size {
-        start_del = alignment.start_y;
-        end_del = alignment.end_y;
+    // delete the smallest chunk possible
+    if alignment.start_y > alignment.start_x {
+        if seq_two_aligned.len() == min_size {
+            start_del = max(alignment.start_y,alignment.end_x);
+            end_del = alignment.end_y;
+        } else {
+            start_del = alignment.start_x;
+            end_del = min(alignment.end_x, alignment.start_y);
+        }
+
+    } else {
+        if seq_two_aligned.len() == min_size {
+            start_del = alignment.start_y;
+            end_del = min(alignment.end_y,alignment.start_x);
+        } else {
+            start_del = max(alignment.start_x,alignment.end_y);
+            end_del = alignment.end_y;
+        }
     }
+    
     let split_at_start = reference.split_at(start_del);
     let mut first_half: Vec<char> = split_at_start.0.to_vec();
     println!("First half length {} and cut point {}",first_half.len(), start_del);

@@ -114,7 +114,9 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
     }
     let split_at_start = reference.split_at(start_del);
     let mut first_half: Vec<char> = split_at_start.0.to_vec();
+    println!("First half length {} and cut point {}",first_half.len(), start_del);
     let mut second_half: Vec<char> = split_at_start.1[(end_del-start_del)..].to_vec();
+    println!("First half length {} and cut point {}",second_half.len(), end_del-start_del);
     first_half.append(&mut second_half);
     first_half
 

@@ -3,6 +3,7 @@ mod kmer_orientation;
 mod score_matrix;
 pub mod mymatrix;
 pub mod needleman;
+
 pub mod smith_waterman_no_diag;
 
 extern crate bio;
@@ -152,6 +153,7 @@ fn align_and_remove_dup(reference: &Vec<char>, min_score_prop: f64, min_length: 
 
 fn rotate_reference(reference: &Vec<char>,offset: usize) -> Vec<char> {
     let mut new_ref = reference.clone();
+    assert!(offset <= new_ref.len(),"Unable to rotate reference by {} bases as this is longer then the length {}",offset,new_ref.len());
     new_ref.rotate_right(offset);
     new_ref
 }

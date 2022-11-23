@@ -75,7 +75,7 @@ fn main() -> std::io::Result<()> {
     let mut output = File::create(output_file).unwrap();
 
     // do an initial check of duplication before diving into subsequent alignments
-    let check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
+    let mut check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
     let mut current_reference = reference_as_chars.clone();
 
     // if we saw a candidate dup
@@ -87,7 +87,7 @@ fn main() -> std::io::Result<()> {
             let mut reference_as_chars_duplicated = current_reference.clone();
             let mut refClone = reference_as_chars_duplicated.clone();
             reference_as_chars_duplicated.append(&mut refClone);
-            let check_dups = check_for_duplicate_region(&current_reference, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
+            check_dups = check_for_duplicate_region(&current_reference, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
             still_dup = check_dups.0;
             println!("Dup loop!");
         }

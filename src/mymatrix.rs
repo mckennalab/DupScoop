@@ -17,7 +17,9 @@ impl<T> MyMatrix<T> where T: Clone + Debug + Sized + Display {
     pub fn cols(&self) -> usize {
         self.values.len() / self.row_length
     }
-    
+
+    pub fn value_count(&self) -> usize {self.values.len()}
+
     #[inline]
     pub fn get<'a>(&self, row: usize, col: usize) -> T {
         self.values[(col * self.row_length) + row].clone()

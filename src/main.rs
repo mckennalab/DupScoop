@@ -74,30 +74,34 @@ fn main() -> std::io::Result<()> {
 
     let mut output = File::create(output_file).unwrap();
 
-    // do an initial check of duplication before diving into subsequent alignments
-    let mut check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
-    let mut current_reference = reference_as_chars.clone();
-
-    // if we saw a candidate dup
-    let mut still_dup = check_dups.0;
-    if still_dup {
-        while still_dup {
-            let rotated_reference = rotate_reference(&current_reference,  check_dups.1);
-            current_reference = align_and_remove_dup(&rotated_reference, min_score_prop, min_length, &scores, diag_dist);
-            let mut reference_as_chars_duplicated = current_reference.clone();
-            let mut refClone = reference_as_chars_duplicated.clone();
-            reference_as_chars_duplicated.append(&mut refClone);
-            check_dups = check_for_duplicate_region(&current_reference, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
-            still_dup = check_dups.0;
-            println!("Dup loop!");
-        }
-        let resulting_reference = String::from_iter(current_reference);
-        writeln!(output,">reference\n{}\n",resulting_reference);
+    if reference_as_chars.len() > 30000 {
+        println!("Warning: we don't try to deduplicate plasmids longer than 30kb...exiting with existing plasmid");
+        writeln!(output, ">reference\n{}\n", String::from_iter(reference_as_chars));
     } else {
-        println!("No dups found!");
-        writeln!(output,">reference\n{}\n",String::from_iter(reference_as_chars));
-    }
+        // do an initial check of duplication before diving into subsequent alignments
+        let mut check_dups = check_for_duplicate_region(&reference_as_chars, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
+        let mut current_reference = reference_as_chars.clone();
 
+        // if we saw a candidate dup
+        let mut still_dup = check_dups.0;
+        if still_dup {
+            while still_dup {
+                let rotated_reference = rotate_reference(&current_reference, check_dups.1);
+                current_reference = align_and_remove_dup(&rotated_reference, min_score_prop, min_length, &scores, diag_dist);
+                let mut reference_as_chars_duplicated = current_reference.clone();
+                let mut refClone = reference_as_chars_duplicated.clone();
+                reference_as_chars_duplicated.append(&mut refClone);
+                check_dups = check_for_duplicate_region(&current_reference, &reference_as_chars_duplicated, min_score_prop, min_length, &scores, diag_dist);
+                still_dup = check_dups.0;
+                println!("Dup loop!");
+            }
+            let resulting_reference = String::from_iter(current_reference);
+            writeln!(output, ">reference\n{}\n", resulting_reference);
+        } else {
+            println!("No dups found!");
+            writeln!(output, ">reference\n{}\n", String::from_iter(reference_as_chars));
+        }
+    }
     Ok(())
 }
 
